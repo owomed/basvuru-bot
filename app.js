@@ -1,7 +1,9 @@
 const { Client, Collection, Intents } = require('discord.js');
 const fs = require('fs');
-const { prefix } = require('./Settings/config.json');
 require('dotenv').config();
+
+// PREFIX değerini .env dosyasından çekin, yoksa varsayılan olarak '+' kullanın
+const prefix = process.env.PREFIX || '+';
 
 const client = new Client({
   intents: [
@@ -156,7 +158,7 @@ client.on('ready', async () => {
 
 client.login(process.env.TOKEN);
 
-// Render için HTTP sunucusu (zorunlu değil ama Render'da şart gibi)
+// Render için HTTP sunucusu
 const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
@@ -168,4 +170,3 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
   console.log(`Render HTTP sunucusu ${port} portunda dinleniyor.`);
 });
-
