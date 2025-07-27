@@ -3,7 +3,7 @@ require('dotenv').config();
 
 // config.json dosyasını yüklüyoruz
 // Bu dosyanın projenizin kök dizininde 'settings' klasörü altında olduğundan emin olun.
-const appConfig = require('././Settings/config.json');
+const appConfig = require('../Settings/config.json');
 
 const client = new Client({
     intents: [
