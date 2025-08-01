@@ -138,7 +138,7 @@ module.exports = {
                 .setThumbnail(user.displayAvatarURL())
                 .setTimestamp();
 
-            // Sonuç kanalını `.env` dosyası yerine sabit ID'den al
+            // Sonuç kanalını sabit ID'den al
             const resultChannel = client.channels.cache.get(config.resultChannelId);
             if (!resultChannel) {
                 console.error(`Sonuç kanalı bulunamadı: ${config.resultChannelId}. Lütfen ID'yi kontrol edin.`);
