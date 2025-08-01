@@ -4,13 +4,13 @@
 // discord.js kütüphanesinden gerekli sınıfları içe aktarıyoruz
 const { MessageEmbed, Permissions, ChannelType } = require('discord.js');
 
-// Bu dosya için `.env` veya `config.json` dosyasına ihtiyaç yok, 
+// Bu dosya için `.env` veya `config.json` dosyasına ihtiyaç yok,
 // çünkü bu veriler botun ana dosyası tarafından zaten yüklendi.
 
 module.exports = {
     // Bu olayın adı "interactionCreate" olacak, çünkü bu bir interaction (buton) olayıdır.
     name: 'interactionCreate',
-    
+
     // Olay çalıştığında çağrılacak asenkron fonksiyon
     async execute(interaction) {
         // Sadece buton etkileşimlerini dinle, diğer etkileşimleri yok say.
@@ -35,12 +35,12 @@ module.exports = {
 
         const { user, customId, guild, client } = interaction;
         // Başvuru kanallarının oluşturulacağı kategori ID'si (Sabit kalabilir)
-        const categoryId = '1268509251911811175'; 
+        const categoryId = '1268509251911811175';
 
         // Başvuru türüne göre yapılandırma
         const basvuruConfig = {
             yetkiliBaşvuru: {
-                name: `yetkili-${user.username.toLowerCase()}`,
+                name: `yetkiliB-${user.username.toLowerCase()}`, // Yeni kanal adlandırma kuralı
                 questions: [
                     'İsim ve yaşınız nedir?',
                     'Neden bu pozisyona başvuruyorsunuz?',
@@ -48,10 +48,10 @@ module.exports = {
                     'Sunucuda ne kadar aktif olabilirsiniz?',
                     'Neden sizi seçmeliyiz?',
                 ],
-                resultChannelId: process.env.RESULT_CHANNEL_ID_YETKILI,
+                resultChannelId: '1268544826727600168', // Yetkili başvuru sonuç kanalı ID'si
             },
             helperBaşvuru: {
-                name: `helper-${user.username.toLowerCase()}`,
+                name: `helperB-${user.username.toLowerCase()}`, // Yeni kanal adlandırma kuralı
                 questions: [
                     'İsim ve yaşınız nedir?',
                     'Helper deneyiminiz var mı? Varsa anlatın.',
@@ -59,7 +59,7 @@ module.exports = {
                     'OwO bot bilginiz nasıl?',
                     'Takım metaları bilginiz nedir?',
                 ],
-                resultChannelId: process.env.RESULT_CHANNEL_ID_HELPER,
+                resultChannelId: '1268544982768160788', // Helper başvuru sonuç kanalı ID'si
             },
         };
 
@@ -89,7 +89,7 @@ module.exports = {
             });
 
             // Kullanıcıya karşılama mesajı ve talimatları gönder
-            await newChannel.send(`Merhaba ${user}! Başvuru formunu buradan doldurabilirsiniz.\n**Lütfen cevapları sırayla teker teker yazınız.**`);
+            await newChannel.send(`Merhaba ${user}! Başvuru formunu buradan doldurabilirsiniz.\n**Lütfen cevapları sırayla teker teker yazınız.**\nKanal 3 dakika içerisinde kapatılacaktır.`);
             if (replied) {
                 await interaction.editReply({ content: `Başvuru kanalınız oluşturuldu: ${newChannel}` });
             }
@@ -114,9 +114,9 @@ module.exports = {
                         setTimeout(() => newChannel.delete().catch(() => {}), 30000);
                         return null; // Döngüyü kırmak için null döndür
                     });
-                
+
                 if (!collected) return; // Zaman aşımı veya hata durumunda işlemi durdur
-                
+
                 const response = collected.first().content;
                 responses.push(response);
             }
@@ -138,10 +138,10 @@ module.exports = {
                 .setThumbnail(user.displayAvatarURL())
                 .setTimestamp();
 
-            // Sonuç kanalını `.env` dosyasından al
+            // Sonuç kanalını `.env` dosyası yerine sabit ID'den al
             const resultChannel = client.channels.cache.get(config.resultChannelId);
             if (!resultChannel) {
-                console.error(`Sonuç kanalı bulunamadı: ${config.resultChannelId}. Lütfen .env dosyasını kontrol edin.`);
+                console.error(`Sonuç kanalı bulunamadı: ${config.resultChannelId}. Lütfen ID'yi kontrol edin.`);
                 await newChannel.send('Hata: Başvuru sonucu gönderilecek kanal bulunamadı. Lütfen bot sahibine bildirin.');
                 return;
             }
@@ -170,7 +170,7 @@ module.exports = {
 
                 const sonuçEmbed = new MessageEmbed()
                     .setTitle('Başvurunuz sonuçlandı')
-                    .setAuthor('MED Başvuru')
+                    .setAuthor({ name: 'MED Başvuru' })
                     .setDescription(
                         `\`Başvuru yapan:\` \n${user}\n` +
                         `${başvuruTürü} başvurunuz <@${reactor.id}> kişisi tarafından ${onay ? 'onaylandı <:med_onaylandi:1284130169417764907>' : 'reddedildi <:med_reddedildi:1284130046902145095>'}`
@@ -178,13 +178,12 @@ module.exports = {
                     .setColor(onay ? '#00ff00' : '#ff0000')
                     .setFooter({ text: `${guild.name} 🤍 | ${başvuruTürü} Başvurusu`, iconURL: guild.iconURL() });
 
-                // Sonuç kanalını `.env` dosyasından al
-                const complaintChannelId = process.env.COMPLAINT_CHANNEL_ID;
-                const sonuçKanalı = client.channels.cache.get(complaintChannelId);
+                // Sonuç kanalını sabit ID'den al
+                const sonuçKanalı = client.channels.cache.get('1277638999464214558');
                 if (sonuçKanalı) {
                     await sonuçKanalı.send({ embeds: [sonuçEmbed] });
                 } else {
-                    console.error(`Sonuç kanalı (COMPLAINT_CHANNEL_ID) bulunamadı: ${complaintChannelId}. Lütfen .env dosyasını kontrol edin.`);
+                    console.error('Sonuç kanalı (1277638999464214558) bulunamadı. Lütfen IDyi kontrol edin.');
                 }
 
                 try {
