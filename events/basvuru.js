@@ -1,3 +1,6 @@
+// Bu dosya `./events/` klasörüne taşınmalıdır.
+// Örneğin: `./events/basvuru.js`
+
 const { MessageEmbed, Permissions, ChannelType } = require('discord.js');
 
 // Config dosyasına gerek yok, ID'leri .env'den alıyoruz.
@@ -53,20 +56,27 @@ module.exports = {
         if (!config) {
             return interaction.editReply({ content: 'Geçersiz buton etkileşimi.' }).catch(console.error);
         }
-
-        // Kategori ID'sinin tanımlı olduğundan emin ol
-        if (!categoryId) {
-            console.error('.env dosyasında BASVURU_KATEGORI_ID tanımlı değil!');
-            return interaction.editReply({ content: 'Hata: Kategori ID\'si yapılandırılmamış.' }).catch(console.error);
-        }
-
-        // Mevcut başvuru kanalı olup olmadığını kontrol et
-        const existingChannel = guild.channels.cache.find((c) => c.name === config.name && c.type === ChannelType.GuildText);
-        if (existingChannel) {
-            return interaction.editReply({ content: `Zaten bir başvuru kanalınız var: <#${existingChannel.id}>` }).catch(console.error);
-        }
-
+        
+        // Kanal oluşturma adımlarına başlamadan önce kritik kontroller
         try {
+            // Botun kanalları yönetme izni var mı kontrol et
+            if (!guild.me.permissions.has(Permissions.FLAGS.MANAGE_CHANNELS)) {
+                console.error('Botun MANAGE_CHANNELS izni yok!');
+                return interaction.editReply({ content: 'Hata: Botun kanal oluşturma yetkisi bulunmuyor.' }).catch(console.error);
+            }
+
+            // Kategori ID'sinin tanımlı ve geçerli olduğundan emin ol
+            if (!categoryId || !guild.channels.cache.has(categoryId)) {
+                console.error(`.env dosyasında BASVURU_KATEGORI_ID tanımlı değil veya geçersiz: ${categoryId}`);
+                return interaction.editReply({ content: 'Hata: Başvuru kanalları için tanımlanan kategori bulunamadı. Lütfen bot sahibine bildirin.' }).catch(console.error);
+            }
+
+            // Mevcut başvuru kanalı olup olmadığını kontrol et
+            const existingChannel = guild.channels.cache.find((c) => c.name === config.name && c.type === ChannelType.GuildText);
+            if (existingChannel) {
+                return interaction.editReply({ content: `Zaten bir başvuru kanalınız var: <#${existingChannel.id}>` }).catch(console.error);
+            }
+
             // Kanal oluşturma ve izinleri ayarlama
             const newChannel = await guild.channels.create({
                 name: config.name,
@@ -169,7 +179,7 @@ module.exports = {
                             `${başvuruTürü} başvurunuz <@${reactor.id}> kişisi tarafından ${onay ? `onaylandı <:${reaction.emoji.name}:${emojiOnayId}>` : `reddedildi <:${reaction.emoji.name}:${emojiRedId}>`}`
                         )
                         .setColor(onay ? '#00ff00' : '#ff0000')
-                        .setFooter({ text: `${guild.name} � | ${başvuruTürü} Başvurusu`, iconURL: guild.iconURL() });
+                        .setFooter({ text: `${guild.name} 🤍 | ${başvuruTürü} Başvurusu`, iconURL: guild.iconURL() });
 
                     const complaintChannelId = process.env.COMPLAINT_CHANNEL_ID;
                     const sonuçKanalı = client.channels.cache.get(complaintChannelId);
@@ -194,12 +204,13 @@ module.exports = {
 
                 await newChannel.send('Başvurunuz alınmıştır. Kanal 5 saniye içinde siliniyor.');
                 setTimeout(() => newChannel.delete().catch(() => {}), 5000);
+
             });
 
         } catch (error) {
             console.error('Başvuru kanalı oluşturulurken veya işlenirken hata oluştu:', error);
             // Hata oluştuğunda kullanıcıya bilgi ver
-            await interaction.editReply({ content: 'Başvuru kanalınız oluşturulurken bir hata oluştu. Lütfen daha sonra tekrar deneyin.' }).catch(console.error);
+            await interaction.editReply({ content: `Başvuru kanalı oluşturulurken bir hata oluştu: \`${error.message}\`. Lütfen sunucu izinlerini kontrol edin.` }).catch(console.error);
         }
     },
 };
