@@ -1,9 +1,13 @@
 // Bu dosya `./events/` klasörüne taşınmalıdır.
 // Örneğin: `./events/basvuru.js`
 
-const { MessageEmbed, Permissions, ChannelType } = require('discord.js');
+const { MessageEmbed, Permissions } = require('discord.js');
 
-// Config dosyasına gerek yok, ID'leri .env'den alıyoruz.
+// dotenv'i burada çağırmaya gerek yok, app.js zaten çağırdı.
+// require('dotenv').config();
+
+// config.json'ı çağırmaya gerek yok, ID'leri .env'den alacağız.
+// const appConfig = require('../Settings/config.json');
 
 module.exports = {
     // Bu olayın adı "interactionCreate" olacak, çünkü bu bir interaction (buton) olayıdır.
@@ -11,13 +15,14 @@ module.exports = {
     
     // Olay çalıştığında çağrılacak fonksiyon.
     // interaction objesi Discord.js tarafından otomatik olarak sağlanır.
+    // client objesini interaction.client olarak alıyoruz, bu sayede tek bir bot instance'ı kullanıyoruz.
     async execute(interaction) {
         // Sadece buton etkileşimlerini dinle
         if (!interaction.isButton()) return;
 
-        // Discord'a hızlıca yanıt veriyoruz, bu hatayı önlemek için çok önemli.
         let replied = false;
         try {
+            // Yanıt verme süresi dolmadan deferReply ile yanıtı ertele
             await interaction.deferReply({ ephemeral: true });
             replied = true;
         } catch (err) {
@@ -25,7 +30,7 @@ module.exports = {
             return;
         }
 
-        const { user, customId, guild, client } = interaction;
+        const { user, customId, guild, client } = interaction; // client objesini interaction'dan alıyoruz
         const categoryId = '1268509251911811175'; // Başvuru kanallarının oluşturulacağı kategori ID'si (Sabit kalabilir)
 
         // Başvuru türüne göre yapılandırma
@@ -68,7 +73,7 @@ module.exports = {
 
         try {
             const newChannel = await guild.channels.create(config.name, {
-                type: ChannelType.GuildText,
+                type: 'GUILD_TEXT',
                 parent: categoryId,
                 permissionOverwrites: [
                     { id: guild.roles.everyone.id, deny: [Permissions.FLAGS.VIEW_CHANNEL] },
@@ -157,6 +162,7 @@ module.exports = {
                         .setColor(onay ? '#00ff00' : '#ff0000')
                         .setFooter({ text: `${guild.name} 🤍 | ${başvuruTürü} Başvurusu`, iconURL: guild.iconURL() });
 
+                    // Sonuç kanalını .env'den al
                     const complaintChannelId = process.env.COMPLAINT_CHANNEL_ID;
                     const sonuçKanalı = client.channels.cache.get(complaintChannelId);
                     if (sonuçKanalı) {
