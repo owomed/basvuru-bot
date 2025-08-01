@@ -1,164 +1,289 @@
-const { MessageEmbed, MessageActionRow, MessageButton } = require('discord.js');
+// Bu dosya `./events/` klasörüne taşınmalıdır.
+// Bu dosya hem başvuru hem de soru talep butonlarını işler.
+// Discord.js v13/14 ve üzeri için uyumludur.
+
+const { MessageEmbed, Permissions, ChannelType } = require('discord.js');
 
 module.exports = {
-  name: 'interactionCreate',
-  async execute(interaction, client) {
-    if (!interaction.isButton()) return;
+    // Bu dosyanın dinleyeceği olay 'interactionCreate'
+    name: 'interactionCreate',
 
-    const { customId, guild, user, channel } = interaction;
+    // Etkileşim olduğunda çalışacak asenkron fonksiyon
+    async execute(interaction) {
+        // Sadece buton etkileşimlerini dinle, diğer etkileşimleri yok say.
+        if (!interaction.isButton()) return;
 
-    const supportRoleId = '1236317902295138304';
-    const logChannelId = '1234964469340438590';
+        // Butonun customId'sine göre ilgili fonksiyonu çalıştır.
+        // Bu yapı, farklı butonlar için tek bir dosya kullanmamızı sağlar.
+        switch (interaction.customId) {
+            case 'yetkiliBaşvuru':
+            case 'helperBaşvuru':
+                // Başvuru butonlarını işleyen kısım
+                handleBasvuru(interaction);
+                break;
+            case 'soruTalep':
+                // Soru talep butonunu işleyen kısım
+                handleSoruTalep(interaction);
+                break;
+            default:
+                // Tanımsız butonları görmezden gel
+                return;
+        }
+    },
+};
 
-    const sendLog = async (title, description) => {
-      const logChannel = guild.channels.cache.get(logChannelId);
-      if (!logChannel) return;
-      const logEmbed = new MessageEmbed()
-        .setTitle(title)
-        .setDescription(description)
-        .setTimestamp();
-      await logChannel.send({ embeds: [logEmbed] });
+/**
+ * Başvuru butonlarını işleyen fonksiyon.
+ * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
+ */
+async function handleBasvuru(interaction) {
+    let replied = false;
+    try {
+        await interaction.deferReply({ ephemeral: true });
+        replied = true;
+    } catch (err) {
+        console.error('Başvuru etkileşimi yanıtlanamadı:', err);
+        return;
+    }
+
+    const { user, customId, guild, client } = interaction;
+    const categoryId = '1268509251911811175';
+
+    const basvuruConfig = {
+        yetkiliBaşvuru: {
+            name: `yetkiliB-${user.username.toLowerCase()}`,
+            questions: [
+                'İsim ve yaşınız nedir?',
+                'Neden bu pozisyona başvuruyorsunuz?',
+                'Bir deneyiminiz var mı? Varsa anlatın.',
+                'Sunucuda ne kadar aktif olabilirsiniz?',
+                'Neden sizi seçmeliyiz?',
+            ],
+            resultChannelId: '1268544826727600168',
+        },
+        helperBaşvuru: {
+            name: `helperB-${user.username.toLowerCase()}`,
+            questions: [
+                'İsim ve yaşınız nedir?',
+                'Helper deneyiminiz var mı? Varsa anlatın.',
+                'Sunucuda ne kadar aktif olabilirsiniz?',
+                'OwO bot bilginiz nasıl?',
+                'Takım metaları bilginiz nedir?',
+            ],
+            resultChannelId: '1268544982768160788',
+        },
     };
 
-    const createTicket = async () => {
-      const existingChannel = guild.channels.cache.find(c =>
-        c.name === `soru-talep-${user.username.toLowerCase()}`
-      );
+    const config = basvuruConfig[customId];
+    if (!config) {
+        return replied && interaction.editReply({ content: 'Geçersiz buton etkileşimi.' });
+    }
 
-      if (existingChannel) {
-        return interaction.reply({
-          content: `Zaten açık bir ticket'iniz var: <#${existingChannel.id}>`,
-          ephemeral: true
-        });
-      }
+    const existingChannel = guild.channels.cache.find((c) => c.name === config.name);
+    if (existingChannel) {
+        return replied && interaction.editReply({ content: `Zaten bir başvuru kanalınız var: <#${existingChannel.id}>` });
+    }
 
-      try {
-        const ticketChannel = await guild.channels.create(`soru-talep-${user.username.toLowerCase()}`, {
-          type: 'GUILD_TEXT',
-          permissionOverwrites: [
-            { id: guild.roles.everyone, deny: ['VIEW_CHANNEL'] },
-            { id: user.id, allow: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'READ_MESSAGE_HISTORY', 'ATTACH_FILES'] },
-            { id: supportRoleId, allow: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'READ_MESSAGE_HISTORY'] },
-          ]
-        });
-
-        await ticketChannel.send(`<a:med_1arrowok:1235316502824226888> ${user} soru veya talep için burada <@&${supportRoleId}>`);
-
-        const welcomeEmbed = new MessageEmbed()
-          .setTitle('Soru/Talep')
-          .setColor('#ef610c')
-          .setDescription(
-            'Hoş geldiniz!\nNe sorunuz veya sorununuz varsa sormaktan çekinmeyin.\n' +
-            '**Personeller size en kısa sürede yardımcı olacaktır! Lütfen sabırlı olun.**\n\n' +
-            'Ticket\'ı kapatmak için aşağıdaki "Kapat" butonunu kullanabilirsiniz.'
-          )
-          .setFooter(`by hicckimse | ${guild.name}`, guild.iconURL())
-          .setTimestamp();
-
-        const closeButton = new MessageActionRow().addComponents(
-          new MessageButton()
-            .setCustomId('soruKapat') // <-- Değiştirildi
-            .setLabel('Kapat')
-            .setStyle('DANGER')
-        );
-
-        await ticketChannel.send({ embeds: [welcomeEmbed], components: [closeButton] });
-
-        await sendLog('Ticket Açıldı', `**Kullanıcı:** ${user.tag} \`(${user.id})\`\n**Kanal:** ${ticketChannel}`);
-
-        await interaction.reply({
-          content: `🎫 Ticket kanalınız oluşturuldu: ${ticketChannel}`,
-          ephemeral: true
+    try {
+        const newChannel = await guild.channels.create({
+            name: config.name,
+            type: ChannelType.GuildText,
+            parent: categoryId,
+            permissionOverwrites: [
+                { id: guild.roles.everyone.id, deny: [Permissions.FLAGS.VIEW_CHANNEL] },
+                { id: user.id, allow: [Permissions.FLAGS.VIEW_CHANNEL, Permissions.FLAGS.SEND_MESSAGES] },
+            ],
         });
 
-      } catch (err) {
-        console.error('Ticket oluşturulamadı:', err);
-        if (!interaction.replied) {
-          await interaction.reply({
-            content: 'Bir hata oluştu. Lütfen tekrar deneyin.',
-            ephemeral: true
-          });
-        }
-      }
-    };
-
-    const confirmCloseTicket = async () => {
-      const confirmRow = new MessageActionRow().addComponents(
-        new MessageButton()
-          .setCustomId('soruOnayla') // <-- Değiştirildi
-          .setLabel('Evet')
-          .setStyle('SUCCESS'),
-        new MessageButton()
-          .setCustomId('soruIptal') // <-- Değiştirildi
-          .setLabel('Hayır')
-          .setStyle('DANGER')
-      );
-
-      try {
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            content: 'Ticket **silinecektir**. Emin misiniz?',
-            components: [confirmRow],
-            ephemeral: true
-          });
-        }
-      } catch (err) {
-        console.error('Kapatma onayı gönderilemedi:', err);
-      }
-    };
-
-    const deleteTicket = async () => {
-      try {
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            content: 'Ticket siliniyor... <a:med_onay:1240943849795489812>',
-            ephemeral: true
-          });
+        await newChannel.send(`Merhaba ${user}! Başvuru formunu buradan doldurabilirsiniz.\n**Lütfen cevapları sırayla teker teker yazınız.**\nKanal 3 dakika içerisinde kapatılacaktır.`);
+        if (replied) {
+            await interaction.editReply({ content: `Başvuru kanalınız oluşturuldu: ${newChannel}` });
         }
 
-        await sendLog('Ticket Silindi',
-          `**Kullanıcı:** ${user.tag}\n**Kanal:** ${channel.name}\n**Kapatan:** ${user}`
-        );
+        const responses = [];
+        const filter = (m) => m.author.id === user.id;
+
+        for (const [index, q] of config.questions.entries()) {
+            await newChannel.send(`**${index + 1}. ${q}**`);
+            const collected = await newChannel.awaitMessages({ filter, max: 1, time: 180000, errors: ['time'] })
+                .catch(() => {
+                    console.log('Başvuru zaman aşımına uğradı.');
+                    try {
+                        user.send('Başvuru formunu doldurmadığınız için başvuru kanalınız kapatılacaktır.');
+                    } catch (e) {
+                        console.error(`DM gönderilemedi: ${e.message}`);
+                    }
+                    newChannel.send('Kanal 3 dakika içinde yanıt alınmadığı için kapatılmıştır.');
+                    setTimeout(() => newChannel.delete().catch(() => {}), 30000);
+                    return null;
+                });
+
+            if (!collected) return;
+
+            const response = collected.first().content;
+            responses.push(response);
+        }
+
+        const embed = new MessageEmbed()
+            .setTitle(customId === 'yetkiliBaşvuru' ? 'Yetkili Başvuru' : 'Helper Başvuru')
+            .setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() })
+            .setDescription(`**Başvuru yapan:** ${user}`)
+            .addFields(
+                config.questions.map((q, i) => ({
+                    name: `❓ ${q}`,
+                    value: responses[i] || 'Cevap verilmedi',
+                    inline: false,
+                }))
+            )
+            .setColor('#0099ff')
+            .setFooter({ text: guild.name, iconURL: guild.iconURL() })
+            .setThumbnail(user.displayAvatarURL())
+            .setTimestamp();
+
+        const resultChannel = client.channels.cache.get(config.resultChannelId);
+        if (!resultChannel) {
+            console.error(`Sonuç kanalı bulunamadı: ${config.resultChannelId}. Lütfen ID'yi kontrol edin.`);
+            await newChannel.send('Hata: Başvuru sonucu gönderilecek kanal bulunamadı. Lütfen bot sahibine bildirin.');
+            return;
+        }
+
+        const sentMessage = await resultChannel.send({ content: '<@&1243478734078742579>', embeds: [embed] });
+        await sentMessage.react('<:med_onaylandi:1284130169417764907>');
+        await sentMessage.react('<:med_reddedildi:1284130046902145095>');
+
+        const reactionFilter = (reaction, reactor) =>
+            ['1284130169417764907', '1284130046902145095'].includes(reaction.emoji.id) &&
+            guild.members.cache.get(reactor.id)?.roles.cache.hasAny(
+                '1243478734078742579',
+                '1216094391060529393',
+                '1188389290292551740'
+            );
+
+        const reactionCollector = sentMessage.createReactionCollector({ filter: reactionFilter, max: 1, time: 600000 });
+
+        reactionCollector.on('collect', async (reaction, reactor) => {
+            const onay = reaction.emoji.id === '1284130169417764907';
+            const başvuruTürü = customId === 'yetkiliBaşvuru' ? 'Yetkili' : 'Helper';
+
+            const sonuçEmbed = new MessageEmbed()
+                .setTitle('Başvurunuz sonuçlandı')
+                .setAuthor({ name: 'MED Başvuru' })
+                .setDescription(
+                    `\`Başvuru yapan:\` \n${user}\n` +
+                    `${başvuruTürü} başvurunuz <@${reactor.id}> kişisi tarafından ${onay ? 'onaylandı <:med_onaylandi:1284130169417764907>' : 'reddedildi <:med_reddedildi:1284130046902145095>'}`
+                )
+                .setColor(onay ? '#00ff00' : '#ff0000')
+                .setFooter({ text: `${guild.name} 🤍 | ${başvuruTürü} Başvurusu`, iconURL: guild.iconURL() });
+
+            const sonuçKanalı = client.channels.cache.get('1277638999464214558');
+            if (sonuçKanalı) {
+                await sonuçKanalı.send({ embeds: [sonuçEmbed] });
+            } else {
+                console.error('Sonuç kanalı (1277638999464214558) bulunamadı. Lütfen IDyi kontrol edin.');
+            }
+
+            try {
+                await sentMessage.reactions.removeAll();
+            } catch (error) {
+                console.error('Mesajdaki emojiler kaldırılamadı:', error);
+            }
+        });
+
+        reactionCollector.on('end', (collected, reason) => {
+            if (reason === 'time' && collected.size === 0) {
+                console.log('Başvuru mesajına yetkili tarafından tepki verilmediği için zaman aşımına uğradı.');
+            }
+        });
+
+        await newChannel.send('Başvurunuz alınmıştır. Kanal 5 saniye içinde siliniyor.');
+        setTimeout(() => newChannel.delete().catch(() => {}), 5000);
+
+    } catch (error) {
+        console.error('Başvuru kanalı oluşturulurken veya işlenirken hata oluştu:', error);
+        if (replied) {
+            await interaction.editReply({ content: 'Başvuru kanalınız oluşturulurken bir hata oluştu. Lütfen daha sonra tekrar deneyin.' });
+        } else {
+            try {
+                await interaction.followUp({ content: 'Başvuru kanalınız oluşturulurken bir hata oluştu. Lütfen daha sonra tekrar deneyin.', ephemeral: true });
+            } catch (followUpError) {
+                console.error('Follow-up yanıtı da gönderilemedi:', followUpError);
+            }
+        }
+    }
+}
+
+/**
+ * Soru talep butonunu işleyen fonksiyon.
+ * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
+ */
+async function handleSoruTalep(interaction) {
+    let replied = false;
+    try {
+        await interaction.deferReply({ ephemeral: true });
+        replied = true;
+    } catch (err) {
+        console.error('Soru talep etkileşimi yanıtlanamadı:', err);
+        return;
+    }
+
+    const { user, guild } = interaction;
+    const categoryId = '1268509251911811175';
+    const channelName = `soru-talep-${user.username.toLowerCase()}`;
+    const existingChannel = guild.channels.cache.find(c => c.name === channelName);
+
+    if (existingChannel) {
+        return replied && interaction.editReply({ content: `Zaten bir soru talep kanalınız var: <#${existingChannel.id}>` });
+    }
+
+    try {
+        const newChannel = await guild.channels.create({
+            name: channelName,
+            type: ChannelType.GuildText,
+            parent: categoryId,
+            permissionOverwrites: [
+                { id: guild.roles.everyone.id, deny: [Permissions.FLAGS.VIEW_CHANNEL] },
+                { id: user.id, allow: [Permissions.FLAGS.VIEW_CHANNEL, Permissions.FLAGS.SEND_MESSAGES] },
+            ],
+        });
+
+        await newChannel.send(`${user}, merhaba! Lütfen sorunuzu bu kanala yazın.\nBir yetkili en kısa sürede size yardımcı olacaktır.`);
+        if (replied) {
+            await interaction.editReply({ content: `Soru talep kanalınız oluşturuldu: ${newChannel}` });
+        }
+
+        const filter = (m) => m.author.id === user.id;
+        await newChannel.awaitMessages({ filter, max: 1, time: 300000, errors: ['time'] })
+            .then(collected => {
+                const soru = collected.first().content;
+                console.log(`Kullanıcıdan gelen soru: ${soru}`);
+                newChannel.send(`Sorunuz alındı. Bir yetkiliye haber verildi. Cevap için lütfen sabırla bekleyin.`);
+            })
+            .catch(() => {
+                try {
+                    user.send('Soru kanalı içinde herhangi bir mesaj yazmadığınız için kanalınız kapatılacaktır.');
+                } catch (e) {
+                    console.error(`DM gönderilemedi: ${e.message}`);
+                }
+                newChannel.send('Kanal 5 dakika içinde yanıt alınmadığı için kapatılmıştır.');
+            });
 
         setTimeout(() => {
-          channel.delete().catch(err => console.error('Kanal silinemedi:', err));
-        }, 3000);
+            newChannel.delete().catch(err => {
+                console.error('Soru talep kanalı silinemedi:', err);
+            });
+        }, 30000);
 
-      } catch (err) {
-        console.error('Ticket silme hatası:', err);
-      }
-    };
-
-    const cancelTicketClose = async () => {
-      try {
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            content: 'Ticket kapatma işlemi iptal edildi. <a:med_hayir:1240942589977559081>',
-            ephemeral: true
-          });
+    } catch (error) {
+        console.error('Soru talep kanalı oluşturulurken veya işlenirken hata oluştu:', error);
+        if (replied) {
+            await interaction.editReply({ content: 'Soru talep kanalı oluşturulurken bir hata oluştu. Lütfen daha sonra tekrar deneyin.' });
+        } else {
+            try {
+                await interaction.followUp({ content: 'Soru talep kanalı oluşturulurken bir hata oluştu. Lütfen daha sonra tekrar deneyin.', ephemeral: true });
+            } catch (followUpError) {
+                console.error('Follow-up yanıtı da gönderilemedi:', followUpError);
+            }
         }
-      } catch (err) {
-        console.error('İptal mesajı gönderilemedi:', err);
-      }
-    };
-
-    // === Buton İşlemleri ===
-    switch (customId) {
-      case 'görüş':
-        await createTicket();
-        break;
-
-      case 'soruKapat':
-        await confirmCloseTicket();
-        break;
-
-      case 'soruOnayla':
-        await deleteTicket();
-        break;
-
-      case 'soruIptal':
-        await cancelTicketClose();
-        break;
     }
-  }
-};
+      }
+                      
