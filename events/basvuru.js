@@ -1,13 +1,6 @@
-// Bu dosya `./events/` klasörüne taşınmalıdır.
-// Örneğin: `./events/basvuru.js`
+const { MessageEmbed, Permissions, ChannelType } = require('discord.js');
 
-const { MessageEmbed, Permissions } = require('discord.js');
-
-// dotenv'i burada çağırmaya gerek yok, app.js zaten çağırdı.
-// require('dotenv').config();
-
-// config.json'ı çağırmaya gerek yok, ID'leri .env'den alacağız.
-// const appConfig = require('../Settings/config.json');
+// Config dosyasına gerek yok, ID'leri .env'den alıyoruz.
 
 module.exports = {
     // Bu olayın adı "interactionCreate" olacak, çünkü bu bir interaction (buton) olayıdır.
@@ -15,28 +8,25 @@ module.exports = {
     
     // Olay çalıştığında çağrılacak fonksiyon.
     // interaction objesi Discord.js tarafından otomatik olarak sağlanır.
-    // client objesini interaction.client olarak alıyoruz, bu sayede tek bir bot instance'ı kullanıyoruz.
     async execute(interaction) {
         // Sadece buton etkileşimlerini dinle
         if (!interaction.isButton()) return;
 
-        let replied = false;
+        // Discord'a hızlıca yanıt veriyoruz, bu hatayı önlemek için çok önemli.
         try {
-            // Yanıt verme süresi dolmadan deferReply ile yanıtı ertele
             await interaction.deferReply({ ephemeral: true });
-            replied = true;
         } catch (err) {
-            console.error('Interaction yanıtlanamadı, zaman aşımına uğramış olabilir.', err);
+            console.error('Interaction yanıtlanamadı (zaman aşımı veya botun yetkisi yok):', err);
             return;
         }
 
-        const { user, customId, guild, client } = interaction; // client objesini interaction'dan alıyoruz
-        const categoryId = '1268509251911811175'; // Başvuru kanallarının oluşturulacağı kategori ID'si (Sabit kalabilir)
+        const { user, customId, guild, client } = interaction;
+        const categoryId = process.env.BASVURU_KATEGORI_ID; // Kategori ID'si .env'den çekilmeli
 
         // Başvuru türüne göre yapılandırma
         const basvuruConfig = {
             yetkiliBaşvuru: {
-                name: `yetkili-${user.username.toLowerCase()}`,
+                name: `yetkili-${user.username.toLowerCase().replace(/[^a-z0-9]/g, '-')}`, // Kullanıcı adını sanitize et
                 questions: [
                     'İsim ve yaşınız nedir?',
                     'Neden bu pozisyona başvuruyorsunuz?',
@@ -44,11 +34,10 @@ module.exports = {
                     'Sunucuda ne kadar aktif olabilirsiniz?',
                     'Neden sizi seçmeliyiz?',
                 ],
-                // Sonuç kanalı ID'sini .env'den çek
-                resultChannelId: process.env.RESULT_CHANNEL_ID_YETKILI, // Yeni ENV değişkeni adı
+                resultChannelId: process.env.RESULT_CHANNEL_ID_YETKILI,
             },
             helperBaşvuru: {
-                name: `helper-${user.username.toLowerCase()}`,
+                name: `helper-${user.username.toLowerCase().replace(/[^a-z0-9]/g, '-')}`, // Kullanıcı adını sanitize et
                 questions: [
                     'İsim ve yaşınız nedir?',
                     'Helper deneyiminiz var mı? Varsa anlatın.',
@@ -56,24 +45,32 @@ module.exports = {
                     'OwO bot bilginiz nasıl?',
                     'Takım metaları bilginiz nedir?',
                 ],
-                // Sonuç kanalı ID'sini .env'den çek
-                resultChannelId: process.env.RESULT_CHANNEL_ID_HELPER, // Yeni ENV değişkeni adı
+                resultChannelId: process.env.RESULT_CHANNEL_ID_HELPER,
             },
         };
 
         const config = basvuruConfig[customId];
         if (!config) {
-            return replied && interaction.editReply({ content: 'Geçersiz buton etkileşimi.' });
+            return interaction.editReply({ content: 'Geçersiz buton etkileşimi.' }).catch(console.error);
         }
 
-        const existingChannel = guild.channels.cache.find((c) => c.name === config.name);
+        // Kategori ID'sinin tanımlı olduğundan emin ol
+        if (!categoryId) {
+            console.error('.env dosyasında BASVURU_KATEGORI_ID tanımlı değil!');
+            return interaction.editReply({ content: 'Hata: Kategori ID\'si yapılandırılmamış.' }).catch(console.error);
+        }
+
+        // Mevcut başvuru kanalı olup olmadığını kontrol et
+        const existingChannel = guild.channels.cache.find((c) => c.name === config.name && c.type === ChannelType.GuildText);
         if (existingChannel) {
-            return replied && interaction.editReply({ content: `Zaten bir başvuru kanalınız var: <#${existingChannel.id}>` });
+            return interaction.editReply({ content: `Zaten bir başvuru kanalınız var: <#${existingChannel.id}>` }).catch(console.error);
         }
 
         try {
-            const newChannel = await guild.channels.create(config.name, {
-                type: 'GUILD_TEXT',
+            // Kanal oluşturma ve izinleri ayarlama
+            const newChannel = await guild.channels.create({
+                name: config.name,
+                type: ChannelType.GuildText,
                 parent: categoryId,
                 permissionOverwrites: [
                     { id: guild.roles.everyone.id, deny: [Permissions.FLAGS.VIEW_CHANNEL] },
@@ -81,15 +78,15 @@ module.exports = {
                 ],
             });
 
+            // Kullanıcıya bilgi mesajı gönder
+            await interaction.editReply({ content: `Başvuru kanalınız oluşturuldu: ${newChannel}` }).catch(console.error);
+
+            // Başvuru kanalına soruları gönder
             await newChannel.send(`Merhaba ${user}! Başvuru formunu buradan doldurabilirsiniz.\n**Lütfen cevapları sırayla teker teker yazınız.**`);
             for (const q of config.questions) {
                 await newChannel.send(`**${q}**`);
             }
             await newChannel.send('Kanal 3 dakika boyunca bir mesaj gönderilmezse kapatılacaktır.');
-
-            if (replied) {
-                await interaction.editReply({ content: `Başvuru kanalınız oluşturuldu: ${newChannel}` });
-            }
 
             const filter = (m) => m.author.id === user.id;
             const collector = newChannel.createMessageCollector({ filter, time: 180000 }); // 3 dakika = 180000 ms
@@ -132,24 +129,36 @@ module.exports = {
                     return;
                 }
 
-                const sentMessage = await resultChannel.send({ content: '<@&1243478734078742579>', embeds: [embed] }); // Yetkili rol ID'si
+                // Yetkili rol ID'leri de .env'den çekilmeli
+                const yetkiliRoleId = process.env.YETKILI_ROLE_ID; 
+                if (!yetkiliRoleId) {
+                    console.error('.env dosyasında YETKILI_ROLE_ID tanımlı değil!');
+                    return newChannel.send('Hata: Yetkili rol ID\'si yapılandırılmamış.').catch(console.error);
+                }
 
-                // Onay ve red emojilerini ekle
-                await sentMessage.react('<:med_onaylandi:1284130169417764907>');
-                await sentMessage.react('<:med_reddedildi:1284130046902145095>');
+                const sentMessage = await resultChannel.send({ content: `<@&${yetkiliRoleId}>`, embeds: [embed] });
+
+                // Emoji ID'leri de .env'den çekilmeli
+                const emojiOnayId = process.env.EMOJI_ONAY_ID;
+                const emojiRedId = process.env.EMOJI_RED_ID;
+
+                if (emojiOnayId && emojiRedId) {
+                    await sentMessage.react(emojiOnayId);
+                    await sentMessage.react(emojiRedId);
+                }
 
                 const reactionFilter = (reaction, reactor) =>
-                    ['1284130169417764907', '1284130046902145095'].includes(reaction.emoji.id) &&
+                    [emojiOnayId, emojiRedId].includes(reaction.emoji.id) &&
                     guild.members.cache.get(reactor.id)?.roles.cache.hasAny(
-                        '1243478734078742579', // Yetkili rolü ID'si
-                        '1216094391060529393', // Başka bir yetkili rolü ID'si
-                        '1188389290292551740'  // Başka bir yetkili rolü ID'si
+                        process.env.YETKILI_ROLE_ID,
+                        process.env.YETKILI_ROLE_ID_2,
+                        process.env.YETKILI_ROLE_ID_3
                     );
 
                 const reactionCollector = sentMessage.createReactionCollector({ filter: reactionFilter, max: 1, time: 600000 }); // 10 dakika süre
 
                 reactionCollector.on('collect', async (reaction, reactor) => {
-                    const onay = reaction.emoji.id === '1284130169417764907';
+                    const onay = reaction.emoji.id === emojiOnayId;
                     const başvuruTürü = customId === 'yetkiliBaşvuru' ? 'Yetkili' : 'Helper';
 
                     const sonuçEmbed = new MessageEmbed()
@@ -157,12 +166,11 @@ module.exports = {
                         .setAuthor('MED Başvuru')
                         .setDescription(
                             `\`Başvuru yapan:\` \n${user}\n` +
-                            `${başvuruTürü} başvurunuz <@${reactor.id}> kişisi tarafından ${onay ? 'onaylandı <:med_onaylandi:1284130169417764907>' : 'reddedildi <:med_reddedildi:1284130046902145095>'}`
+                            `${başvuruTürü} başvurunuz <@${reactor.id}> kişisi tarafından ${onay ? `onaylandı <:${reaction.emoji.name}:${emojiOnayId}>` : `reddedildi <:${reaction.emoji.name}:${emojiRedId}>`}`
                         )
                         .setColor(onay ? '#00ff00' : '#ff0000')
-                        .setFooter({ text: `${guild.name} 🤍 | ${başvuruTürü} Başvurusu`, iconURL: guild.iconURL() });
+                        .setFooter({ text: `${guild.name} � | ${başvuruTürü} Başvurusu`, iconURL: guild.iconURL() });
 
-                    // Sonuç kanalını .env'den al
                     const complaintChannelId = process.env.COMPLAINT_CHANNEL_ID;
                     const sonuçKanalı = client.channels.cache.get(complaintChannelId);
                     if (sonuçKanalı) {
@@ -187,17 +195,11 @@ module.exports = {
                 await newChannel.send('Başvurunuz alınmıştır. Kanal 5 saniye içinde siliniyor.');
                 setTimeout(() => newChannel.delete().catch(() => {}), 5000);
             });
+
         } catch (error) {
             console.error('Başvuru kanalı oluşturulurken veya işlenirken hata oluştu:', error);
-            if (replied) {
-                await interaction.editReply({ content: 'Başvuru kanalınız oluşturulurken bir hata oluştu. Lütfen daha sonra tekrar deneyin.' });
-            } else {
-                try {
-                    await interaction.followUp({ content: 'Başvuru kanalınız oluşturulurken bir hata oluştu. Lütfen daha sonra tekrar deneyin.', ephemeral: true });
-                } catch (followUpError) {
-                    console.error('Follow-up yanıtı da gönderilemedi:', followUpError);
-                }
-            }
+            // Hata oluştuğunda kullanıcıya bilgi ver
+            await interaction.editReply({ content: 'Başvuru kanalınız oluşturulurken bir hata oluştu. Lütfen daha sonra tekrar deneyin.' }).catch(console.error);
         }
     },
 };
