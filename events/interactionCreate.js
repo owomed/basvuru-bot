@@ -84,9 +84,8 @@ async function handleBasvuru(interaction) {
     }
 
     try {
-        // Kanal oluşturma işlemini await ile bekletmiyoruz, ancak bir promise olarak saklıyoruz
-        const channelPromise = guild.channels.create(config.name, {
-            type: 'GUILD_TEXT',
+        const newChannel = await guild.channels.create(config.name, {
+            type: 'GUILD_TEXT', // V13 uyumluluğu için string ifade kullanıldı
             parent: categoryId,
             permissionOverwrites: [
                 { id: guild.roles.everyone.id, deny: [Permissions.FLAGS.VIEW_CHANNEL] },
@@ -94,14 +93,6 @@ async function handleBasvuru(interaction) {
             ],
         });
 
-        if (replied) {
-            await interaction.editReply({ content: `Başvuru kanalınız oluşturuluyor... Lütfen bekleyin.` });
-        }
-
-        // Kanalın oluşturulmasını bekliyoruz ve referansı alıyoruz
-        const newChannel = await channelPromise;
-
-        // Kanal oluşturulduktan sonraki işlemleri yapıyoruz
         await newChannel.send(`Merhaba ${user}! Başvuru formunu buradan doldurabilirsiniz.\n**Lütfen cevapları sırayla teker teker yazınız.**\nKanal 3 dakika içerisinde kapatılacaktır.`);
         if (replied) {
             await interaction.editReply({ content: `Başvuru kanalınız oluşturuldu: ${newChannel}` });
@@ -243,8 +234,7 @@ async function handleSoruTalep(interaction) {
     }
 
     try {
-        // Kanal oluşturma işlemini await ile bekletmiyoruz, ancak bir promise olarak saklıyoruz
-        const channelPromise = guild.channels.create(channelName, {
+        const newChannel = await guild.channels.create(channelName, {
             type: 'GUILD_TEXT', // V13 uyumluluğu için string ifade kullanıldı
             parent: categoryId,
             permissionOverwrites: [
@@ -252,13 +242,6 @@ async function handleSoruTalep(interaction) {
                 { id: user.id, allow: [Permissions.FLAGS.VIEW_CHANNEL, Permissions.FLAGS.SEND_MESSAGES] },
             ],
         });
-
-        if (replied) {
-            await interaction.editReply({ content: `Soru talep kanalınız oluşturuluyor... Lütfen bekleyin.` });
-        }
-
-        // Kanalın oluşturulmasını bekliyoruz ve referansı alıyoruz
-        const newChannel = await channelPromise;
 
         await newChannel.send(`${user}, merhaba! Lütfen sorunuzu bu kanala yazın.\nBir yetkili en kısa sürede size yardımcı olacaktır.`);
         if (replied) {
@@ -299,5 +282,5 @@ async function handleSoruTalep(interaction) {
             }
         }
     }
-                }
-                
+    }
+    
