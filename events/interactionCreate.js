@@ -4,9 +4,6 @@
 
 const { MessageEmbed, Permissions } = require('discord.js');
 
-// Aynı anda birden fazla etkileşimi önlemek için aktif etkileşimleri takip eden bir nesne.
-const activeInteractions = {};
-
 module.exports = {
     // Bu dosyanın dinleyeceği olay 'interactionCreate'
     name: 'interactionCreate',
@@ -21,59 +18,23 @@ module.exports = {
 
         console.log(`[DEBUG] Buton etkileşimi alındı. Custom ID: ${interaction.customId}, Kullanıcı: ${interaction.user.tag}`);
 
-        const { user } = interaction;
-
-        // Kullanıcının zaten aktif bir etkileşimi var mı kontrol et
-        if (activeInteractions[user.id]) {
-            console.log(`[HATA] Kullanıcı (${user.tag}) zaten aktif bir etkileşimde. Yeni etkileşim reddedildi.`);
-            try {
-                // deferReply süresi dolmuş olabilir, bu yüzden followUp kullanmak daha güvenli.
-                await interaction.reply({ content: 'Lütfen bir önceki işleminizin tamamlanmasını bekleyin.', ephemeral: true });
-            } catch (e) {
-                // Eğer reply de başarısız olursa logla ama işlemi durdurma
-                console.error(`[KRİTİK HATA] Kullanıcıya bekleme mesajı gönderilirken hata oluştu: ${e.message}`, e);
-            }
-            return;
-        }
-
-        // Kullanıcıyı aktif etkileşimlere ekle
-        activeInteractions[user.id] = true;
-        console.log(`[DEBUG] Kullanıcı (${user.tag}) aktif etkileşimlere eklendi.`);
-
-
-        // Try/catch bloğu tüm işlemin tamamlanmasını veya hatayı yakalamasını sağlar.
-        try {
-            // Butonun customId'sine göre ilgili fonksiyonu çalıştır.
-            switch (interaction.customId) {
-                case 'yetkiliBaşvuru':
-                case 'helperBaşvuru':
-                    // Başvuru butonlarını işleyen kısım
-                    console.log(`[DEBUG] Başvuru fonksiyonu çağrılıyor: ${interaction.customId}`);
-                    await handleBasvuru(interaction);
-                    break;
-                case 'soruTalep':
-                    // Soru talep butonunu işleyen kısım
-                    console.log('[DEBUG] Soru Talep fonksiyonu çağrılıyor.');
-                    await handleSoruTalep(interaction);
-                    break;
-                default:
-                    // Tanımsız butonları görmezden gel
-                    console.log(`[DEBUG] Tanımsız buton ID'si: ${interaction.customId}`);
-                    // Kullanıcıyı aktif etkileşimlerden çıkar
-                    delete activeInteractions[user.id];
-                    return;
-            }
-        } catch (e) {
-            console.error(`[KRİTİK HATA] Etkileşim işlenirken genel bir hata oluştu: ${e.message}`, e);
-            // Hata durumunda kullanıcıyı aktif etkileşimlerden çıkar
-            delete activeInteractions[user.id];
-        } finally {
-            // İşlem bittikten sonra kullanıcıyı aktif etkileşimlerden çıkar
-            // Bu, işlem her başarılı olduğunda veya hata attığında çalışır.
-            if (activeInteractions[user.id]) {
-                delete activeInteractions[user.id];
-                console.log(`[DEBUG] Kullanıcı (${user.tag}) aktif etkileşimlerden çıkarıldı.`);
-            }
+        // Butonun customId'sine göre ilgili fonksiyonu çalıştır.
+        switch (interaction.customId) {
+            case 'yetkiliBaşvuru':
+            case 'helperBaşvuru':
+                // Başvuru butonlarını işleyen kısım
+                console.log(`[DEBUG] Başvuru fonksiyonu çağrılıyor: ${interaction.customId}`);
+                await handleBasvuru(interaction);
+                break;
+            case 'soruTalep':
+                // Soru talep butonunu işleyen kısım
+                console.log('[DEBUG] Soru Talep fonksiyonu çağrılıyor.');
+                await handleSoruTalep(interaction);
+                break;
+            default:
+                // Tanımsız butonları görmezden gel
+                console.log(`[DEBUG] Tanımsız buton ID'si: ${interaction.customId}`);
+                return;
         }
     },
 };
@@ -89,7 +50,6 @@ async function handleBasvuru(interaction) {
         await interaction.deferReply({ ephemeral: true });
         console.log(`[DEBUG] DeferReply başarıyla yapıldı. Kullanıcı: ${interaction.user.tag}`);
     } catch (e) {
-        // Bu hata, interaction zaten cevaplandığı için oluşabilir (race condition)
         console.error(`[KRİTİK HATA] DeferReply yapılırken hata oluştu: ${e.message}`, e);
         return; // İşlemi durdur
     }
@@ -249,16 +209,8 @@ async function handleBasvuru(interaction) {
         // Özel emojileri ID ile al, yoksa varsayılan kullan
         const onayEmoji = client.emojis.cache.get('1284130169417764907') || '✅';
         const redEmoji = client.emojis.cache.get('1284130046902145095') || '❌';
-        if (client.emojis.cache.get('1284130169417764907')) {
-            console.log(`[DEBUG] Onay emoji ID'si bulundu: ${onayEmoji.name}`);
-        } else {
-            console.error(`[HATA] Onay emoji ID'si (1284130169417764907) bulunamadı. Lütfen botun erişimini ve ID'yi kontrol edin.`);
-        }
-        if (client.emojis.cache.get('1284130046902145095')) {
-            console.log(`[DEBUG] Red emoji ID'si bulundu: ${redEmoji.name}`);
-        } else {
-            console.error(`[HATA] Red emoji ID'si (1284130046902145095) bulunamadı. Lütfen botun erişimini ve ID'yi kontrol edin.`);
-        }
+        console.log(`[DEBUG] Emoji ID'leri alındı. Onay: ${onayEmoji.name}, Red: ${redEmoji.name}`);
+
 
         const sentMessage = await resultChannel.send({
             content: `<@&1243478734078742579>`, // Yetkili rolünü etiketle
@@ -361,7 +313,6 @@ async function handleSoruTalep(interaction) {
         await interaction.deferReply({ ephemeral: true });
         console.log(`[DEBUG] Soru talep deferReply yapıldı. Kullanıcı: ${interaction.user.tag}`);
     } catch (e) {
-        // Bu hata, interaction zaten cevaplandığı için oluşabilir (race condition)
         console.error(`[KRİTİK HATA] Soru talep DeferReply yapılırken hata oluştu: ${e.message}`, e);
         return;
     }
