@@ -1,8 +1,8 @@
 // Bu dosya `./events/` klasörüne taşınmalıdır.
 // Bu dosya hem başvuru hem de soru talep butonlarını işler.
-// Discord.js v13/14 ve üzeri için uyumludur.
+// Discord.js v13 ile uyumludur.
 
-const { MessageEmbed, Permissions, ChannelType } = require('discord.js');
+const { MessageEmbed, Permissions } = require('discord.js');
 
 module.exports = {
     // Bu dosyanın dinleyeceği olay 'interactionCreate'
@@ -14,7 +14,6 @@ module.exports = {
         if (!interaction.isButton()) return;
 
         // Butonun customId'sine göre ilgili fonksiyonu çalıştır.
-        // Bu yapı, farklı butonlar için tek bir dosya kullanmamızı sağlar.
         switch (interaction.customId) {
             case 'yetkiliBaşvuru':
             case 'helperBaşvuru':
@@ -85,9 +84,8 @@ async function handleBasvuru(interaction) {
     }
 
     try {
-        const newChannel = await guild.channels.create({
-            name: config.name,
-            type: ChannelType.GuildText,
+        const newChannel = await guild.channels.create(config.name, {
+            type: 'GUILD_TEXT', // V13 uyumluluğu için string ifade kullanıldı
             parent: categoryId,
             permissionOverwrites: [
                 { id: guild.roles.everyone.id, deny: [Permissions.FLAGS.VIEW_CHANNEL] },
@@ -236,9 +234,8 @@ async function handleSoruTalep(interaction) {
     }
 
     try {
-        const newChannel = await guild.channels.create({
-            name: channelName,
-            type: ChannelType.GuildText,
+        const newChannel = await guild.channels.create(channelName, {
+            type: 'GUILD_TEXT', // V13 uyumluluğu için string ifade kullanıldı
             parent: categoryId,
             permissionOverwrites: [
                 { id: guild.roles.everyone.id, deny: [Permissions.FLAGS.VIEW_CHANNEL] },
@@ -285,5 +282,5 @@ async function handleSoruTalep(interaction) {
             }
         }
     }
-      }
-                      
+    }
+    
