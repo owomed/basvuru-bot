@@ -120,6 +120,8 @@ async function handleBasvuru(interaction) {
             permissionOverwrites: [
                 { id: guild.roles.everyone.id, deny: [Permissions.FLAGS.VIEW_CHANNEL] },
                 { id: user.id, allow: [Permissions.FLAGS.VIEW_CHANNEL, Permissions.FLAGS.SEND_MESSAGES] },
+                // Botun kendi ID'si için özel bir izne gerek yok, ancak garanti olması için eklenebilir.
+                // { id: client.user.id, allow: [Permissions.FLAGS.VIEW_CHANNEL, Permissions.FLAGS.SEND_MESSAGES] },
             ],
         });
         console.log(`[DEBUG] Yeni başvuru kanalı oluşturuldu: ${newChannel.name} (${newChannel.id})`);
@@ -132,7 +134,8 @@ async function handleBasvuru(interaction) {
             await newChannel.send(`Merhaba ${user}! Başvuru formunu buradan doldurabilirsiniz.\n**Lütfen cevapları sırayla teker teker yazınız.**\nFormu doldurmak için **3 dakika** süreniz var.`);
             console.log(`[DEBUG] Başvuru kanalına ilk karşılama mesajı gönderildi.`);
         } catch (sendError) {
-            console.error(`[HATA] Başvuru kanalına ilk mesaj gönderilirken hata oluştu: ${sendError.message}`, sendError);
+            console.error(`[HATA] Başvuru kanalına ilk mesaj gönderilirken hata oluştu: ${sendError.message}. Bu genellikle botun kanala mesaj gönderme izni olmamasından kaynaklanır.`, sendError);
+            // Hata durumunda kanalı sil
             await newChannel.delete().catch(() => {});
             return interaction.editReply({ content: 'Başvuru kanalına ilk mesaj gönderilirken bir hata oluştu. Lütfen tekrar deneyin.' });
         }
@@ -313,7 +316,7 @@ async function handleSoruTalep(interaction) {
         return;
     }
 
-    const { user, guild } = interaction;
+    const { user, guild, client } = interaction;
     const CATEGORY_ID = '1268509251911811175';
 
     // Kullanıcı adını temizle ve kanal adına ekle
@@ -341,6 +344,8 @@ async function handleSoruTalep(interaction) {
             permissionOverwrites: [
                 { id: guild.roles.everyone.id, deny: [Permissions.FLAGS.VIEW_CHANNEL] },
                 { id: user.id, allow: [Permissions.FLAGS.VIEW_CHANNEL, Permissions.FLAGS.SEND_MESSAGES] },
+                // Botun kendi ID'si için özel bir izne gerek yok, ancak garanti olması için eklenebilir.
+                // { id: client.user.id, allow: [Permissions.FLAGS.VIEW_CHANNEL, Permissions.FLAGS.SEND_MESSAGES] },
             ],
         });
         console.log(`[DEBUG] Yeni soru talep kanalı oluşturuldu: ${newChannel.name} (${newChannel.id})`);
@@ -353,7 +358,7 @@ async function handleSoruTalep(interaction) {
             await newChannel.send(`${user}, merhaba! Lütfen sorunuzu bu kanala yazın.\nBir yetkili en kısa sürede size yardımcı olacaktır.\n**Bu kanal 5 dakika içinde kapanacaktır.**`);
             console.log('[DEBUG] Soru talep kanalına ilk mesaj gönderildi.');
         } catch (sendError) {
-            console.error(`[HATA] Soru talep kanalına ilk mesaj gönderilirken hata oluştu: ${sendError.message}`, sendError);
+            console.error(`[HATA] Soru talep kanalına ilk mesaj gönderilirken hata oluştu: ${sendError.message}. Bu genellikle botun kanala mesaj gönderme izni olmamasından kaynaklanır.`, sendError);
             await newChannel.delete().catch(() => {});
             return interaction.editReply({ content: 'Soru talep kanalına ilk mesaj gönderilirken bir hata oluştu. Lütfen tekrar deneyin.' });
         }
