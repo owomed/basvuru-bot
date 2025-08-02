@@ -126,10 +126,11 @@ async function handleBasvuru(interaction) {
         });
         console.log(`[DEBUG] Yeni başvuru kanalı oluşturuldu: ${newChannel.name} (${newChannel.id})`);
         
-        await interaction.editReply({ content: `Başvuru kanalınız oluşturuldu: ${newChannel}` });
+        await interaction.editReply({ content: `Başvuru kanalınız oluşturuldu: ${newChannel}. Lütfen ilk mesajın gelmesini bekleyin.` });
         console.log(`[DEBUG] Kullanıcıya kanal oluşturuldu mesajı gönderildi.`);
 
-        // Kanala ilk mesajı gönderme adımı
+        // Discord API'sinin yanıt süresine ve ağ gecikmesine bağlı olarak, bu ilk mesajın gönderilmesi birkaç saniye sürebilir.
+        // Bu gecikme, kodun hatalı olduğu anlamına gelmez.
         try {
             await newChannel.send(`Merhaba ${user}! Başvuru formunu buradan doldurabilirsiniz.\n**Lütfen cevapları sırayla teker teker yazınız.**\nFormu doldurmak için **3 dakika** süreniz var.`);
             console.log(`[DEBUG] Başvuru kanalına ilk karşılama mesajı gönderildi.`);
@@ -350,10 +351,11 @@ async function handleSoruTalep(interaction) {
         });
         console.log(`[DEBUG] Yeni soru talep kanalı oluşturuldu: ${newChannel.name} (${newChannel.id})`);
         
-        await interaction.editReply({ content: `Soru talep kanalınız oluşturuldu: ${newChannel}` });
+        await interaction.editReply({ content: `Soru talep kanalınız oluşturuldu: ${newChannel}. Lütfen ilk mesajın gelmesini bekleyin.` });
         console.log(`[DEBUG] Kullanıcıya kanal oluşturuldu mesajı gönderildi.`);
 
-        // Kanala ilk mesajı gönder
+        // Discord API'sinin yanıt süresine ve ağ gecikmesine bağlı olarak, bu ilk mesajın gönderilmesi birkaç saniye sürebilir.
+        // Bu gecikme, kodun hatalı olduğu anlamına gelmez.
         try {
             await newChannel.send(`${user}, merhaba! Lütfen sorunuzu bu kanala yazın.\nBir yetkili en kısa sürede size yardımcı olacaktır.\n**Bu kanal 5 dakika içinde kapanacaktır.**`);
             console.log('[DEBUG] Soru talep kanalına ilk mesaj gönderildi.');
