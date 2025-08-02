@@ -36,14 +36,8 @@ module.exports = {
  * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
  */
 async function handleBasvuru(interaction) {
-    let replied = false;
-    try {
-        await interaction.deferReply({ ephemeral: true });
-        replied = true;
-    } catch (err) {
-        console.error('Başvuru etkileşimi yanıtlanamadı:', err);
-        return;
-    }
+    // Discord'un 3 saniyelik yanıt süresi dolmadan önce deferReply ile yanıt ver.
+    await interaction.deferReply({ ephemeral: true });
 
     const { user, customId, guild, client } = interaction;
     const categoryId = '1268509251911811175';
@@ -75,28 +69,27 @@ async function handleBasvuru(interaction) {
 
     const config = basvuruConfig[customId];
     if (!config) {
-        return replied && interaction.editReply({ content: 'Geçersiz buton etkileşimi.' });
+        return interaction.editReply({ content: 'Geçersiz buton etkileşimi.' });
     }
 
     const existingChannel = guild.channels.cache.find((c) => c.name === config.name);
     if (existingChannel) {
-        return replied && interaction.editReply({ content: `Zaten bir başvuru kanalınız var: <#${existingChannel.id}>` });
+        return interaction.editReply({ content: `Zaten bir başvuru kanalınız var: <#${existingChannel.id}>` });
     }
 
+    let newChannel;
     try {
-        const newChannel = await guild.channels.create(config.name, {
-            type: 'GUILD_TEXT', // V13 uyumluluğu için string ifade kullanıldı
+        newChannel = await guild.channels.create(config.name, {
+            type: 'GUILD_TEXT',
             parent: categoryId,
             permissionOverwrites: [
                 { id: guild.roles.everyone.id, deny: [Permissions.FLAGS.VIEW_CHANNEL] },
                 { id: user.id, allow: [Permissions.FLAGS.VIEW_CHANNEL, Permissions.FLAGS.SEND_MESSAGES] },
             ],
         });
-
+        await interaction.editReply({ content: `Başvuru kanalınız oluşturuldu: ${newChannel}` });
+        
         await newChannel.send(`Merhaba ${user}! Başvuru formunu buradan doldurabilirsiniz.\n**Lütfen cevapları sırayla teker teker yazınız.**\nKanal 3 dakika içerisinde kapatılacaktır.`);
-        if (replied) {
-            await interaction.editReply({ content: `Başvuru kanalınız oluşturuldu: ${newChannel}` });
-        }
 
         const responses = [];
         const filter = (m) => m.author.id === user.id;
@@ -198,15 +191,10 @@ async function handleBasvuru(interaction) {
 
     } catch (error) {
         console.error('Başvuru kanalı oluşturulurken veya işlenirken hata oluştu:', error);
-        if (replied) {
-            await interaction.editReply({ content: 'Başvuru kanalınız oluşturulurken bir hata oluştu. Lütfen daha sonra tekrar deneyin.' });
-        } else {
-            try {
-                await interaction.followUp({ content: 'Başvuru kanalınız oluşturulurken bir hata oluştu. Lütfen daha sonra tekrar deneyin.', ephemeral: true });
-            } catch (followUpError) {
-                console.error('Follow-up yanıtı da gönderilemedi:', followUpError);
-            }
+        if (newChannel) {
+            newChannel.delete().catch(err => console.error('Hata oluştuğunda kanal silinemedi:', err));
         }
+        await interaction.editReply({ content: 'Başvuru kanalınız oluşturulurken bir hata oluştu. Lütfen daha sonra tekrar deneyin.' });
     }
 }
 
@@ -215,14 +203,7 @@ async function handleBasvuru(interaction) {
  * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
  */
 async function handleSoruTalep(interaction) {
-    let replied = false;
-    try {
-        await interaction.deferReply({ ephemeral: true });
-        replied = true;
-    } catch (err) {
-        console.error('Soru talep etkileşimi yanıtlanamadı:', err);
-        return;
-    }
+    await interaction.deferReply({ ephemeral: true });
 
     const { user, guild } = interaction;
     const categoryId = '1268509251911811175';
@@ -230,23 +211,22 @@ async function handleSoruTalep(interaction) {
     const existingChannel = guild.channels.cache.find(c => c.name === channelName);
 
     if (existingChannel) {
-        return replied && interaction.editReply({ content: `Zaten bir soru talep kanalınız var: <#${existingChannel.id}>` });
+        return interaction.editReply({ content: `Zaten bir soru talep kanalınız var: <#${existingChannel.id}>` });
     }
 
+    let newChannel;
     try {
-        const newChannel = await guild.channels.create(channelName, {
-            type: 'GUILD_TEXT', // V13 uyumluluğu için string ifade kullanıldı
+        newChannel = await guild.channels.create(channelName, {
+            type: 'GUILD_TEXT',
             parent: categoryId,
             permissionOverwrites: [
                 { id: guild.roles.everyone.id, deny: [Permissions.FLAGS.VIEW_CHANNEL] },
                 { id: user.id, allow: [Permissions.FLAGS.VIEW_CHANNEL, Permissions.FLAGS.SEND_MESSAGES] },
             ],
         });
+        await interaction.editReply({ content: `Soru talep kanalınız oluşturuldu: ${newChannel}` });
 
         await newChannel.send(`${user}, merhaba! Lütfen sorunuzu bu kanala yazın.\nBir yetkili en kısa sürede size yardımcı olacaktır.`);
-        if (replied) {
-            await interaction.editReply({ content: `Soru talep kanalınız oluşturuldu: ${newChannel}` });
-        }
 
         const filter = (m) => m.author.id === user.id;
         await newChannel.awaitMessages({ filter, max: 1, time: 300000, errors: ['time'] })
@@ -264,6 +244,7 @@ async function handleSoruTalep(interaction) {
                 newChannel.send('Kanal 5 dakika içinde yanıt alınmadığı için kapatılmıştır.');
             });
 
+        // Kanalı 30 saniye sonra kapatma mantığı
         setTimeout(() => {
             newChannel.delete().catch(err => {
                 console.error('Soru talep kanalı silinemedi:', err);
@@ -272,15 +253,10 @@ async function handleSoruTalep(interaction) {
 
     } catch (error) {
         console.error('Soru talep kanalı oluşturulurken veya işlenirken hata oluştu:', error);
-        if (replied) {
-            await interaction.editReply({ content: 'Soru talep kanalı oluşturulurken bir hata oluştu. Lütfen daha sonra tekrar deneyin.' });
-        } else {
-            try {
-                await interaction.followUp({ content: 'Soru talep kanalı oluşturulurken bir hata oluştu. Lütfen daha sonra tekrar deneyin.', ephemeral: true });
-            } catch (followUpError) {
-                console.error('Follow-up yanıtı da gönderilemedi:', followUpError);
-            }
+        if (newChannel) {
+            newChannel.delete().catch(err => console.error('Hata oluştuğunda kanal silinemedi:', err));
         }
+        await interaction.editReply({ content: 'Soru talep kanalı oluşturulurken bir hata oluştu. Lütfen daha sonra tekrar deneyin.' });
     }
     }
-    
+                
