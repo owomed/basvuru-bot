@@ -207,8 +207,8 @@ async function handleBasvuru(interaction) {
         console.log(`[DEBUG] Sonuç kanalı bulundu: ${resultChannel.name}`);
 
         // Özel emojileri ID ile al, yoksa varsayılan kullan
-        const onayEmoji = client.emojis.cache.get('1284130169417764907') || '✅';
-        const redEmoji = client.emojis.cache.get('1284130046902145095') || '❌';
+        const onayEmoji = client.emojis.cache.get('<:med_onaylandi:1284130169417764907>') || '✅';
+        const redEmoji = client.emojis.cache.get('<:med_reddedildi:1284130046902145095>') || '❌';
         console.log(`[DEBUG] Emoji ID'leri alındı. Onay: ${onayEmoji.name}, Red: ${redEmoji.name}`);
 
 
