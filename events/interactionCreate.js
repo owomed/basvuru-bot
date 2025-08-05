@@ -56,7 +56,7 @@ async function handleBasvuru(interaction) {
 
     const { user, customId, guild, client } = interaction;
 
-    // Kategori ve sonuç kanalı ID'leri. Bunları bir config dosyasında tutmak daha düzenli olacaktır.
+    // Kategori ve sonuç kanalı ID'leri.
     const CATEGORY_ID = '1268509251911811175';
     console.log(`[DEBUG] Kullanılan kategori ID'si: ${CATEGORY_ID}`);
 
@@ -207,9 +207,17 @@ async function handleBasvuru(interaction) {
         console.log(`[DEBUG] Sonuç kanalı bulundu: ${resultChannel.name}`);
 
         // Özel emojileri ID ile al, yoksa varsayılan kullan
-        const onayEmoji = client.emojis.cache.get('<:med_onaylandi:1284130169417764907>') || '✅';
-        const redEmoji = client.emojis.cache.get('<:med_reddedildi:1284130046902145095>') || '❌';
-        console.log(`[DEBUG] Emoji ID'leri alındı. Onay: ${onayEmoji.name}, Red: ${redEmoji.name}`);
+        const EMOJI_ONAY_ID = '1284130169417764907';
+        const EMOJI_RED_ID = '1284130046902145095';
+
+        const onayEmoji = client.emojis.cache.get(EMOJI_ONAY_ID);
+        const redEmoji = client.emojis.cache.get(EMOJI_RED_ID);
+
+        // Emojilerin varlığını kontrol et, yoksa varsayılan Unicode emojileri kullan
+        const finalOnayEmoji = onayEmoji ? onayEmoji.id : '✅';
+        const finalRedEmoji = redEmoji ? redEmoji.id : '❌';
+        
+        console.log(`[DEBUG] Emoji ID'leri alındı. Onay: ${finalOnayEmoji}, Red: ${finalRedEmoji}`);
 
 
         const sentMessage = await resultChannel.send({
@@ -218,14 +226,14 @@ async function handleBasvuru(interaction) {
         });
         console.log(`[DEBUG] Başvuru sonucu mesajı sonuç kanalına gönderildi: ${sentMessage.id}`);
 
-        await sentMessage.react(onayEmoji);
-        await sentMessage.react(redEmoji);
+        await sentMessage.react(finalOnayEmoji);
+        await sentMessage.react(finalRedEmoji);
         console.log('[DEBUG] Başvuru sonuç mesajına emojiler eklendi.');
 
         // Reaksiyon toplayıcı filtresi
         const reactionFilter = (reaction, reactor) => {
+            const isCorrectEmoji = reaction.emoji.id === EMOJI_ONAY_ID || reaction.emoji.id === EMOJI_RED_ID;
             const hasRequiredRole = guild.members.cache.get(reactor.id)?.roles.cache.some(role => config.requiredRoles.includes(role.id));
-            const isCorrectEmoji = reaction.emoji.id === onayEmoji.id || reaction.emoji.id === redEmoji.id;
             const isNotBot = reactor.id !== client.user.id;
             return isCorrectEmoji && hasRequiredRole && isNotBot;
         };
@@ -234,12 +242,12 @@ async function handleBasvuru(interaction) {
             filter: reactionFilter,
             max: 1, // Sadece ilk tepkiyi topla
             time: 600000, // 10 dakika = 600000 ms
-            errors: ['time']
+            errors: ['time'] // Zaman aşımında hata fırlat
         });
 
         reactionCollector.on('collect', async (reaction, reactor) => {
             console.log(`[DEBUG] Yetkili tepkisi alındı. Yetkili: ${reactor.tag}, Tepki: ${reaction.emoji.name}`);
-            const onay = reaction.emoji.id === onayEmoji.id;
+            const onay = reaction.emoji.id === EMOJI_ONAY_ID;
             const başvuruTürü = config.applicationType;
 
             const sonuçEmbed = new MessageEmbed()
@@ -247,7 +255,7 @@ async function handleBasvuru(interaction) {
                 .setAuthor({ name: 'MED Başvuru Sistemi' })
                 .setDescription(
                     `\`Başvuru Yapan:\` ${user}\n` +
-                    `${başvuruTürü} başvurusu <@${reactor.id}> tarafından **${onay ? 'ONAYLANDI' : 'REDDEDİLDİ'}** ${onay ? onayEmoji : redEmoji}`
+                    `${başvuruTürü} başvurusu <@${reactor.id}> tarafından **${onay ? 'ONAYLANDI' : 'REDDEDİLDİ'}** ${onay ? finalOnayEmoji : finalRedEmoji}`
                 )
                 .setColor(onay ? '#00ff00' : '#ff0000')
                 .setFooter({ text: `${guild.name} | ${başvuruTürü} Başvurusu Sonucu`, iconURL: guild.iconURL({ dynamic: true }) })
@@ -317,7 +325,7 @@ async function handleSoruTalep(interaction) {
         return;
     }
 
-    const { user, guild, client } = interaction;
+    const { user, guild } = interaction;
     const CATEGORY_ID = '1268509251911811175';
 
     // Kullanıcı adını temizle ve kanal adına ekle
@@ -345,8 +353,6 @@ async function handleSoruTalep(interaction) {
             permissionOverwrites: [
                 { id: guild.roles.everyone.id, deny: [Permissions.FLAGS.VIEW_CHANNEL] },
                 { id: user.id, allow: [Permissions.FLAGS.VIEW_CHANNEL, Permissions.FLAGS.SEND_MESSAGES] },
-                // Botun kendi ID'si için özel bir izne gerek yok, ancak garanti olması için eklenebilir.
-                // { id: client.user.id, allow: [Permissions.FLAGS.VIEW_CHANNEL, Permissions.FLAGS.SEND_MESSAGES] },
             ],
         });
         console.log(`[DEBUG] Yeni soru talep kanalı oluşturuldu: ${newChannel.name} (${newChannel.id})`);
@@ -377,7 +383,7 @@ async function handleSoruTalep(interaction) {
                 errors: ['time']
             });
             const soru = collected.first().content;
-            console.log(`[DEBUG] Kullanıcıdan gelen soru: ${soru}`);
+            console.log(`[DEBUG] Kullanıcıdan gelen soru: "${soru}"`);
             await newChannel.send(`Sorunuz başarıyla alındı. Bir yetkiliye haber verildi. Cevap için lütfen sabırla bekleyin.`);
             console.log('[DEBUG] Kullanıcıya soru alındı mesajı gönderildi.');
 
@@ -388,26 +394,4 @@ async function handleSoruTalep(interaction) {
             console.error(`[HATA] Soru talep zaman aşımına uğradı veya hata oluştu: ${error.message}`, error);
             await newChannel.send('Belirtilen süre içinde mesaj yazmadığınız için bu kanal kapatılıyor.');
             try {
-                await user.send('Soru kanalı içinde herhangi bir mesaj yazmadığınız için kanalınız kapatıldı. Tekrar denemek için butona basabilirsiniz.');
-            } catch (e) {
-                console.error(`[HATA] DM gönderilemedi: ${e.message}`);
-            }
-        }
-
-        // Kanalı işlem bittikten sonra 30 saniye sonra kapatma
-        console.log('[DEBUG] Soru talep kanalı 30 saniye içinde silinecek.');
-        setTimeout(() => {
-            newChannel.delete().catch(err => {
-                console.error('[HATA] Soru talep kanalı silinemedi:', err);
-            });
-        }, 30000); // 30 saniye
-
-    } catch (error) {
-        console.error('[KRİTİK HATA] Soru talep kanalı oluşturulurken veya işlenirken genel bir hata oluştu:', error);
-        // Eğer kanal oluşturulduysa, hatadan sonra onu silmeye çalış
-        if (newChannel) {
-            newChannel.delete().catch(err => console.error('[HATA] Hata oluştuğunda kanal silinemedi:', err));
-        }
-        await interaction.editReply({ content: 'Soru talep kanalı oluşturulurken bir hata oluştu. Lütfen daha sonra tekrar deneyin.' });
-    }
-}
+                await user.send('Soru kanalı içinde herhangi bir mesaj yazmadığınız için kanalınız kapatıldı. Tekrar denemek için butona basabilirsiniz.')
