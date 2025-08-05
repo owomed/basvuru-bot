@@ -394,4 +394,27 @@ async function handleSoruTalep(interaction) {
             console.error(`[HATA] Soru talep zaman aşımına uğradı veya hata oluştu: ${error.message}`, error);
             await newChannel.send('Belirtilen süre içinde mesaj yazmadığınız için bu kanal kapatılıyor.');
             try {
-                await user.send('Soru kanalı içinde herhangi bir mesaj yazmadığınız için kanalınız kapatıldı. Tekrar denemek için butona basabilirsiniz.')
+                await user.send('Soru kanalı içinde herhangi bir mesaj yazmadığınız için kanalınız kapatıldı. Tekrar denemek için butona basabilirsiniz.');
+            } catch (e) {
+                console.error(`[HATA] Soru talep DM gönderilemedi: ${e.message}`);
+            }
+        }
+
+        // Kanalı 30 saniye sonra kapatma mantığı
+        await newChannel.send('Bu kanal 30 saniye içinde otomatik olarak silinecektir.');
+        console.log('[DEBUG] Soru talep kanalının otomatik silineceğine dair mesaj gönderildi.');
+        setTimeout(() => {
+            newChannel.delete().catch(err => {
+                console.error('[HATA] Soru talep kanalı silinemedi:', err);
+            });
+        }, 30000);
+
+    } catch (error) {
+        console.error('[KRİTİK HATA] Soru talep kanalı oluşturulurken veya işlenirken genel bir hata oluştu:', error);
+        // Eğer kanal oluşturulduysa, hatadan sonra onu silmeye çalış
+        if (newChannel) {
+            newChannel.delete().catch(err => console.error('[HATA] Hata oluştuğunda kanal silinemedi:', err));
+        }
+        await interaction.editReply({ content: 'Soru talep kanalı oluşturulurken bir hata oluştu. Lütfen daha sonra tekrar deneyin.' });
+    }
+}
