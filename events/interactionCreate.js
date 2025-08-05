@@ -206,19 +206,13 @@ async function handleBasvuru(interaction) {
         }
         console.log(`[DEBUG] Sonuç kanalı bulundu: ${resultChannel.name}`);
 
-        // Özel emojileri ID ile al, yoksa varsayılan kullan
-        const EMOJI_ONAY_ID = '1284130169417764907';
+        // Özel emojilerin tam string formatları (Discord'da göründüğü gibi)
+        const EMOJI_ONAY_FULL_STRING = '<:med_onaylandi:1284130169417764907>';
+        const EMOJI_RED_FULL_STRING = '<:med_reddedildi:1284130046902145095>';
+        const EMOJI_ONAY_ID = '1284130169417764907'; // ID'leri filtreleme için tutuyoruz
         const EMOJI_RED_ID = '1284130046902145095';
 
-        const onayEmoji = client.emojis.cache.get(EMOJI_ONAY_ID);
-        const redEmoji = client.emojis.cache.get(EMOJI_RED_ID);
-
-        // Emojilerin varlığını kontrol et, yoksa varsayılan Unicode emojileri kullan
-        const finalOnayEmoji = onayEmoji ? onayEmoji.id : '✅';
-        const finalRedEmoji = redEmoji ? redEmoji.id : '❌';
-        
-        console.log(`[DEBUG] Emoji ID'leri alındı. Onay: ${finalOnayEmoji}, Red: ${finalRedEmoji}`);
-
+        console.log(`[DEBUG] Emoji stringleri kullanılıyor. Onay: ${EMOJI_ONAY_FULL_STRING}, Red: ${EMOJI_RED_FULL_STRING}`);
 
         const sentMessage = await resultChannel.send({
             content: `<@&1243478734078742579>`, // Yetkili rolünü etiketle
@@ -226,21 +220,25 @@ async function handleBasvuru(interaction) {
         });
         console.log(`[DEBUG] Başvuru sonucu mesajı sonuç kanalına gönderildi: ${sentMessage.id}`);
 
-        await sentMessage.react(finalOnayEmoji);
-        await sentMessage.react(finalRedEmoji);
+        // Emojileri doğrudan tam string formatlarıyla tepki olarak ekle
+        await sentMessage.react(EMOJI_ONAY_FULL_STRING);
+        await sentMessage.react(EMOJI_RED_FULL_STRING);
         console.log('[DEBUG] Başvuru sonuç mesajına emojiler eklendi.');
 
         // Reaksiyon toplayıcı filtresi
         const reactionFilter = (reaction, reactor) => {
+            // Reaksiyon emojisi ID'sinin doğru olup olmadığını kontrol et
             const isCorrectEmoji = reaction.emoji.id === EMOJI_ONAY_ID || reaction.emoji.id === EMOJI_RED_ID;
+            // Tepki veren kişinin gerekli rollere sahip olup olmadığını kontrol et
             const hasRequiredRole = guild.members.cache.get(reactor.id)?.roles.cache.some(role => config.requiredRoles.includes(role.id));
+            // Tepki veren kişinin bot olup olmadığını kontrol et (bot kendi tepkilerini işlemesin)
             const isNotBot = reactor.id !== client.user.id;
             return isCorrectEmoji && hasRequiredRole && isNotBot;
         };
 
         const reactionCollector = sentMessage.createReactionCollector({
             filter: reactionFilter,
-            max: 1, // Sadece ilk tepkiyi topla
+            max: 1, // Sadece ilk yetkili tepkisini topla
             time: 600000, // 10 dakika = 600000 ms
             errors: ['time'] // Zaman aşımında hata fırlat
         });
@@ -255,7 +253,7 @@ async function handleBasvuru(interaction) {
                 .setAuthor({ name: 'MED Başvuru Sistemi' })
                 .setDescription(
                     `\`Başvuru Yapan:\` ${user}\n` +
-                    `${başvuruTürü} başvurusu <@${reactor.id}> tarafından **${onay ? 'ONAYLANDI' : 'REDDEDİLDİ'}** ${onay ? finalOnayEmoji : finalRedEmoji}`
+                    `${başvuruTürü} başvurusu <@${reactor.id}> tarafından **${onay ? 'ONAYLANDI' : 'REDDEDİLDİ'}** ${onay ? EMOJI_ONAY_FULL_STRING : EMOJI_RED_FULL_STRING}`
                 )
                 .setColor(onay ? '#00ff00' : '#ff0000')
                 .setFooter({ text: `${guild.name} | ${başvuruTürü} Başvurusu Sonucu`, iconURL: guild.iconURL({ dynamic: true }) })
@@ -352,7 +350,7 @@ async function handleSoruTalep(interaction) {
             parent: CATEGORY_ID,
             permissionOverwrites: [
                 { id: guild.roles.everyone.id, deny: [Permissions.FLAGS.VIEW_CHANNEL] },
-                { id: user.id, allow: [Permissions.FLAGS.VIEW_CHANNEL, Permissions.FLAGS.SEND_MESSAGES] },
+                { id: user.id, allow: [Permissions.FLAGS.FLAGS.VIEW_CHANNEL, Permissions.FLAGS.SEND_MESSAGES] },
             ],
         });
         console.log(`[DEBUG] Yeni soru talep kanalı oluşturuldu: ${newChannel.name} (${newChannel.id})`);
