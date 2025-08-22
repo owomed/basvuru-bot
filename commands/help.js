@@ -1,20 +1,26 @@
-const {
+    const {
     MessageEmbed,
-    MessageActionRow,
-    MessageSelectMenu,
+    ActionRowBuilder,
+    StringSelectMenuBuilder,
     SlashCommandBuilder
 } = require('discord.js');
 
-// Slash komutu için gerekli olan veriyi oluşturur.
+// Hem slash hem de prefix komutları için gerekli olan veriyi tanımla
+// Bu komut, hem +help hem de /help olarak çalışır.
 const slashCommandData = new SlashCommandBuilder()
     .setName('help')
     .setDescription('Botun komutlarını gösterir.');
 
 // Ana komut modülü.
 module.exports = {
-    // execute fonksiyonu artık yalnızca interaction nesnesini alacak.
+    name: 'help', // Bu, prefixli komutlar için gerekli
+    aliases: ['yardim', 'komutlar'], // Bu, prefixli komutlar için takma adları belirler
+    data: slashCommandData, // Bu, slash komutları için gerekli
+
+    // execute fonksiyonu artık yalnızca interaction veya message nesnesini alacak.
     async execute(interactionOrMessage) {
-        const isSlashCommand = interactionOrMessage.isChatInputCommand(); // isChatInputCommand() kullanarak daha güvenli kontrol
+        // Gelen komutun slash komutu mu yoksa prefix komutu mu olduğunu kontrol et
+        const isSlashCommand = interactionOrMessage.isChatInputCommand();
         const user = isSlashCommand ? interactionOrMessage.user : interactionOrMessage.author;
         const replyTarget = isSlashCommand ? interactionOrMessage : interactionOrMessage;
 
@@ -23,14 +29,16 @@ module.exports = {
         const allCommands = new Map([...client.slashCommands, ...client.commands]);
 
         // Komutları filtreleyerek sadece geçerli olanları al
-        const validCommands = Array.from(allCommands.values()).filter(cmd => cmd.data && cmd.data.description);
+        const validCommands = Array.from(allCommands.values()).filter(cmd => (cmd.data && cmd.data.description) || cmd.name);
 
         // Komutlar için seçenekleri oluştur
         const commandOptions = validCommands.map(command => {
+            const commandName = command.data ? command.data.name : command.name;
+            const commandDescription = command.data ? command.data.description : 'Açıklama yok.';
             return {
-                label: command.data.name,
-                description: command.data.description,
-                value: command.data.name,
+                label: commandName,
+                description: commandDescription,
+                value: commandName,
             };
         });
 
@@ -49,9 +57,9 @@ module.exports = {
             timestamp: new Date()
         };
 
-        const row = new MessageActionRow()
+        const row = new ActionRowBuilder()
             .addComponents(
-                new MessageSelectMenu()
+                new StringSelectMenuBuilder()
                 .setCustomId('select_commands')
                 .setPlaceholder('Komutları seçin')
                 .addOptions(commandOptions) // Dinamik olarak oluşturulan seçenekleri ekle
@@ -74,7 +82,7 @@ module.exports = {
                 const value = interaction.values[0];
                 const selectedCommand = allCommands.get(value); // Seçilen komutu bul
 
-                if (!selectedCommand || !selectedCommand.data) {
+                if (!selectedCommand || (!selectedCommand.data && !selectedCommand.name)) {
                     return interaction.reply({
                         content: 'Seçilen komut bulunamadı.',
                         ephemeral: true
@@ -83,7 +91,7 @@ module.exports = {
 
                 const commandsEmbed = {
                     title: 'Komut Bilgisi',
-                    description: `**Komut:** ${selectedCommand.data.name}\n**Açıklama:** ${selectedCommand.data.description}`,
+                    description: `**Komut:** ${selectedCommand.data ? selectedCommand.data.name : selectedCommand.name}\n**Açıklama:** ${selectedCommand.data ? selectedCommand.data.description : 'Açıklama yok.'}`,
                     color: '#00ff00',
                     timestamp: new Date()
                 };
@@ -111,7 +119,4 @@ module.exports = {
             }
         }
     },
-
-    // Slash komut verisi
-    data: slashCommandData
 };
