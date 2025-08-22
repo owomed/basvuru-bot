@@ -16,7 +16,8 @@ module.exports = {
     data: slashCommandData, // Bu, slash komutları için gerekli
 
     async execute(interactionOrMessage) {
-        const isSlashCommand = interactionOrMessage.isChatInputCommand();
+        // Objenin türünü kontrol edin
+        const isSlashCommand = interactionOrMessage.isChatInputCommand && interactionOrMessage.isChatInputCommand();
         const user = isSlashCommand ? interactionOrMessage.user : interactionOrMessage.author;
 
         const client = interactionOrMessage.client;
@@ -59,10 +60,11 @@ module.exports = {
             );
 
         try {
-            await interactionOrMessage.reply({
-                embeds: [embed],
-                components: [row]
-            });
+            if (isSlashCommand) {
+                 await interactionOrMessage.reply({ embeds: [embed], components: [row] });
+            } else {
+                 await interactionOrMessage.reply({ embeds: [embed], components: [row] });
+            }
         } catch (error) {
             console.error('Yanıt gönderilirken hata oluştu:', error);
             return;
