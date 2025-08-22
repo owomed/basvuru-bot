@@ -9,6 +9,7 @@ const {
     ActivityType
 } = require('discord.js');
 const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 // Client'ı oluştururken v14 Intent ve Partials kullanın.
@@ -36,8 +37,20 @@ client.commands = new Collection();
 client.slashCommands = new Collection();
 client.cooldowns = new Collection();
 
-// Prefix değerini .env dosyasından çekin
-const prefix = process.env.PREFIX || '+';
+// --- Prefix Değerini Ayarlama ---
+let prefix;
+const configPath = path.join(__dirname, 'Settings', 'config.json');
+
+try {
+    // config.json dosyasını okuyup prefix'i al
+    const config = require(configPath);
+    prefix = config.prefix;
+    console.log(`[LOG] Prefix, config.json dosyasından yüklendi: ${prefix}`);
+} catch (error) {
+    // Dosya bulunamazsa veya okunamayabilirse varsayılan prefix'i kullan
+    prefix = process.env.PREFIX || '+';
+    console.error(`[HATA] config.json dosyası bulunamadı veya okunamadı. Varsayılan prefix (${prefix}) kullanılacak.`, error);
+}
 
 // --- Komutları Yükleme İşlemi (Tüm komutları tek klasörden yükleyin) ---
 const slashCommands = [];
@@ -99,7 +112,7 @@ client.once('ready', async () => {
             name: 'MED 🤎 OwO ile ilgileniyor',
             type: ActivityType.Custom
         }],
-        status: 'dnd'
+        status: 'online'
     });
 });
 
