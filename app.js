@@ -44,8 +44,15 @@ const configPath = path.join(__dirname, 'Settings', 'config.json');
 try {
     // config.json dosyasını okuyup prefix'i al
     const config = require(configPath);
-    prefix = config.prefix;
-    console.log(`[LOG] Prefix, config.json dosyasından yüklendi: ${prefix}`);
+    // Prefix değerinin varlığını ve geçerli bir string olduğunu kontrol edin
+    if (config && typeof config.prefix === 'string' && config.prefix.length > 0) {
+        prefix = config.prefix;
+        console.log(`[LOG] Prefix, config.json dosyasından yüklendi: ${prefix}`);
+    } else {
+        // config.json'da geçerli bir prefix bulunamazsa varsayılanı kullan
+        prefix = process.env.PREFIX || '+';
+        console.error(`[HATA] config.json dosyasında geçerli bir prefix bulunamadı. Varsayılan prefix (${prefix}) kullanılacak.`);
+    }
 } catch (error) {
     // Dosya bulunamazsa veya okunamayabilirse varsayılan prefix'i kullan
     prefix = process.env.PREFIX || '+';
@@ -112,7 +119,7 @@ client.once('ready', async () => {
             name: 'MED 🤎 OwO ile ilgileniyor',
             type: ActivityType.Custom
         }],
-        status: 'dnd'
+        status: 'idle'
     });
 });
 
