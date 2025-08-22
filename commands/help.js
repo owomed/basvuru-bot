@@ -1,4 +1,4 @@
-    const {
+const {
     MessageEmbed,
     ActionRowBuilder,
     StringSelectMenuBuilder,
@@ -53,7 +53,7 @@ module.exports = {
         const embed = {
             title: 'Yardım Menüsü',
             description: 'Başvuru botu olduğumdan dolayı sadece başvurularla ilgileniyorum ama komutlarımı görmek istersen aşağıdaki seçenekler bölümünden komutları seçebilirsin ☺️',
-            color: '#00ff00',
+            color: 65280, // '#00ff00' yerine 65280 kullanıldı
             timestamp: new Date()
         };
 
@@ -92,7 +92,7 @@ module.exports = {
                 const commandsEmbed = {
                     title: 'Komut Bilgisi',
                     description: `**Komut:** ${selectedCommand.data ? selectedCommand.data.name : selectedCommand.name}\n**Açıklama:** ${selectedCommand.data ? selectedCommand.data.description : 'Açıklama yok.'}`,
-                    color: '#00ff00',
+                    color: 65280, // '#00ff00' yerine 65280 kullanıldı
                     timestamp: new Date()
                 };
 
