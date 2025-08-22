@@ -39,13 +39,23 @@ client.cooldowns = new Collection();
 // Prefix değerini .env dosyasından çekin
 const prefix = process.env.PREFIX || '+';
 
-// --- Komutları Yükleme İşlemi ---
+// --- Komutları Yükleme İşlemi (Tüm komutları tek klasörden yükleyin) ---
+const slashCommands = [];
 const commandFiles = fs.readdirSync('./commands/').filter(file => file.endsWith('.js'));
 for (const file of commandFiles) {
     const command = require(`./commands/${file}`);
-    client.commands.set(command.name, command);
+    
+    // Komutun slash komutu mu yoksa normal komut mu olduğunu kontrol edin
+    if (command.data && command.data.name) {
+        // Bu bir slash komutu
+        client.slashCommands.set(command.data.name, command);
+        slashCommands.push(command.data.toJSON());
+    } else {
+        // Bu bir prefixli komut
+        client.commands.set(command.name, command);
+    }
 }
-console.log('[LOG] Prefixli komutlar başarıyla yüklendi.');
+console.log('[LOG] Tüm komutlar başarıyla yüklendi.');
 
 // --- Eventleri Yükleme İşlemi ---
 const eventFiles = fs.readdirSync('./events/').filter(file => file.endsWith('.js'));
@@ -59,19 +69,11 @@ for (const file of eventFiles) {
 }
 console.log('[LOG] Eventler başarıyla yüklendi.');
 
-// --- Slash Komutlarını Kaydetme ve Yükleme İşlemi ---
-const slashCommands = [];
-const slashCommandFiles = fs.readdirSync('./slashCommands/').filter(file => file.endsWith('.js'));
-
-if (slashCommandFiles.length > 0) {
-    for (const file of slashCommandFiles) {
-        const slashCommand = require(`./slashCommands/${file}`);
-        client.slashCommands.set(slashCommand.data.name, slashCommand);
-        slashCommands.push(slashCommand.data.toJSON());
-    }
-    console.log('[LOG] Slash komutları başarıyla yüklendi.');
-
-    client.once('ready', async () => {
+// --- Slash Komutlarını Kaydetme İşlemi ---
+client.once('ready', async () => {
+    console.log(`[LOG] Bot ${client.user.tag} olarak aktif!`);
+    
+    if (slashCommands.length > 0) {
         try {
             console.log('[LOG] Slash komutları Discord\'a kaydediliyor.');
             const rest = new REST({
@@ -87,8 +89,19 @@ if (slashCommandFiles.length > 0) {
         } catch (error) {
             console.error('[HATA] Slash komutları kaydedilirken bir hata oluştu:', error);
         }
+    } else {
+        console.log('[LOG] Hiçbir slash komutu bulunamadı. Kayıt işlemi atlandı.');
+    }
+
+    // Botun durumunu ayarlayın
+    client.user.setPresence({
+        activities: [{
+            name: 'MED 🤎 OwO ile ilgileniyor',
+            type: ActivityType.Custom
+        }],
+        status: 'idle'
     });
-}
+});
 
 
 // --- Prefixli Mesaj Olayını İşleme ---
@@ -184,23 +197,6 @@ client.tarihHesapla = (date) => {
     string = string.trim();
     return `\`${string} önce\``;
 };
-
-// --- Bot Durumunu Güncelleme ---
-// Sadece bir durum olduğu için tekil bir nesne olarak tanımlandı.
-const status = {
-    name: 'MED 🤎 OwO ile ilgileniyor',
-    type: ActivityType.Custom
-};
-
-client.on('ready', async () => {
-    console.log(`[LOG] Bot ${client.user.tag} olarak aktif!`);
-    
-    // Botun durumu tek bir değere ayarlandı.
-    client.user.setPresence({
-        activities: [status],
-        status: 'idle'
-    });
-});
 
 // Botu Discord'a bağlayın
 client.login(process.env.TOKEN);
