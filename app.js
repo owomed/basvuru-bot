@@ -186,53 +186,13 @@ client.tarihHesapla = (date) => {
 };
 
 // --- Bot Durumunu Güncelleme ---
-const statuses = [
-    {
-        name: 'Başvuruları kontrol ediyor',
-        type: ActivityType.Watching
-    },
-    {
-        name: 'Başvuru yapanlar',
-        type: ActivityType.Competing
-    },
-    {
-        name: 'MED 💚 hicckimse',
-        type: ActivityType.Competing
-    },
-    {
-        name: 'hicckimse 💛 MED',
-        type: ActivityType.Competing
-    },
-    {
-        name: 'MED ❤️ hicckimse',
-        type: ActivityType.Competing
-    },
-    {
-        name: 'hicckimse 🤍 MED',
-        type: ActivityType.Competing
-    },
-    {
-        name: 'MED 🤎 hicckimse',
-        type: ActivityType.Competing
-    },
-    {
-        name: 'hicckimse 💜 MED',
-        type: ActivityType.Competing
-    },
-    {
-        name: 'MED ❤ hicckimse',
-        type: ActivityType.Competing
-    },
-    {
-        name: 'hicckimse 💙 MED',
-        type: ActivityType.Competing
-    },
+const status
     {
         name: 'MED 🤎 OwO ile ilgileniyor',
         type: ActivityType.Custom
     }
 ];
-let statusIndex = 0;
+
 
 client.on('ready', async () => {
     console.log(`[LOG] Bot ${client.user.tag} olarak aktif!`);
