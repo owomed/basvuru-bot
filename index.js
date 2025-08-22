@@ -23,7 +23,7 @@ const client = new Client({
         IntentsBitField.Flags.GuildVoiceStates,
         IntentsBitField.Flags.DirectMessages,
         IntentsBitField.Flags.DirectMessageReactions,
-        IntentsBitField.Flags.MessageContent,
+        IntentsBitField.Flags.MessageContent, // Mesaj içeriğini okumak için bu intent GEREKLİ
     ],
     partials: [
         Partials.Channel,
@@ -38,28 +38,28 @@ client.slashCommands = new Collection();
 client.cooldowns = new Collection();
 
 // --- Prefix Değerini Ayarlama ---
-let prefix;
+let prefix = process.env.PREFIX || '+'; // Varsayılan prefix'i başlangıçta belirle
 const configPath = path.join(__dirname, 'Settings', 'config.json');
 
-try {
-    // config.json dosyasını okuyup prefix'i al
-    const config = require(configPath);
-    // Prefix değerinin varlığını ve geçerli bir string olduğunu kontrol edin
-    if (config && typeof config.prefix === 'string' && config.prefix.length > 0) {
-        prefix = config.prefix;
-        console.log(`[LOG] Prefix, config.json dosyasından yüklendi: ${prefix}`);
-    } else {
-        // config.json'da geçerli bir prefix bulunamazsa varsayılanı kullan
-        prefix = process.env.PREFIX || '+';
-        console.error(`[HATA] config.json dosyasında geçerli bir prefix bulunamadı. Varsayılan prefix (${prefix}) kullanılacak.`);
+// config.json dosyasının varlığını kontrol et
+if (fs.existsSync(configPath)) {
+    try {
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        // Prefix değerinin varlığını ve geçerli bir string olduğunu kontrol edin
+        if (config && typeof config.prefix === 'string' && config.prefix.length > 0) {
+            prefix = config.prefix;
+            console.log(`[LOG] Prefix, config.json dosyasından yüklendi: ${prefix}`);
+        } else {
+            console.error(`[HATA] config.json dosyasında geçerli bir prefix bulunamadı. Varsayılan prefix (${prefix}) kullanılacak.`);
+        }
+    } catch (error) {
+        console.error(`[HATA] config.json dosyası okunurken bir hata oluştu. Varsayılan prefix (${prefix}) kullanılacak.`, error);
     }
-} catch (error) {
-    // Dosya bulunamazsa veya okunamayabilirse varsayılan prefix'i kullan
-    prefix = process.env.PREFIX || '+';
-    console.error(`[HATA] config.json dosyası bulunamadı veya okunamadı. Varsayılan prefix (${prefix}) kullanılacak.`, error);
+} else {
+    console.error(`[HATA] config.json dosyası bulunamadı. Varsayılan prefix (${prefix}) kullanılacak.`);
 }
 
-// --- Komutları Yükleme İşlemi (Tüm komutları tek klasörden yükleyin) ---
+// --- Tüm Komutları Yükleme İşlemi (Tek bir klasörden) ---
 const slashCommands = [];
 const commandFiles = fs.readdirSync('./commands/').filter(file => file.endsWith('.js'));
 for (const file of commandFiles) {
@@ -89,7 +89,7 @@ for (const file of eventFiles) {
 }
 console.log('[LOG] Eventler başarıyla yüklendi.');
 
-// --- Slash Komutlarını Kaydetme İşlemi ---
+// --- Slash Komutlarını Kaydetme ve İşleme ---
 client.once('ready', async () => {
     console.log(`[LOG] Bot ${client.user.tag} olarak aktif!`);
     
@@ -123,6 +123,28 @@ client.once('ready', async () => {
     });
 });
 
+// --- Yeni: Slash komutlarını dinleme ---
+client.on('interactionCreate', async interaction => {
+    // Sadece slash komutlarını (chat input) işleyin
+    if (!interaction.isChatInputCommand()) return;
+    
+    const command = client.slashCommands.get(interaction.commandName);
+    
+    if (!command) return;
+
+    console.log(`[LOG] Bir slash komutu kullanıldı: /${interaction.commandName}`);
+    
+    try {
+        await command.execute(interaction);
+    } catch (error) {
+        console.error('Slash komut çalıştırma hatası:', error);
+        await interaction.reply({
+            content: 'Bu komut çalıştırılırken bir hata oluştu.',
+            ephemeral: true
+        });
+    }
+});
+
 
 // --- Prefixli Mesaj Olayını İşleme ---
 client.on('messageCreate', async message => {
@@ -135,6 +157,8 @@ client.on('messageCreate', async message => {
     const command = client.commands.get(commandName) || client.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
 
     if (!command) return;
+
+    console.log(`[LOG] Bir prefixli komut kullanıldı: ${prefix}${commandName}`);
 
     try {
         await command.execute(client, message, args);
