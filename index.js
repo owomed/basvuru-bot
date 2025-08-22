@@ -70,8 +70,9 @@ for (const file of commandFiles) {
         // Bu bir slash komutu
         client.slashCommands.set(command.data.name, command);
         slashCommands.push(command.data.toJSON());
-    } else {
-        // Bu bir prefixli komut
+    }
+    // Her iki tür komutu da yüklemek için 'name' özelliğini de kontrol edin.
+    if (command.name) {
         client.commands.set(command.name, command);
     }
 }
@@ -130,7 +131,11 @@ client.on('interactionCreate', async interaction => {
     
     const command = client.slashCommands.get(interaction.commandName);
     
-    if (!command) return;
+    if (!command) {
+      // Komut bulunamadıysa uyarı ver
+      console.warn(`[UYARI] Slash komutu bulunamadı: /${interaction.commandName}`);
+      return;
+    }
 
     console.log(`[LOG] Bir slash komutu kullanıldı: /${interaction.commandName}`);
     
@@ -138,10 +143,16 @@ client.on('interactionCreate', async interaction => {
         await command.execute(interaction);
     } catch (error) {
         console.error('Slash komut çalıştırma hatası:', error);
-        await interaction.reply({
-            content: 'Bu komut çalıştırılırken bir hata oluştu.',
-            ephemeral: true
-        });
+        if (interaction.deferred || interaction.replied) {
+            await interaction.editReply({
+                content: 'Bu komut çalıştırılırken bir hata oluştu. Lütfen komutu tekrar deneyin.'
+            }).catch(e => console.error('Hata mesajı düzenlenirken hata:', e));
+        } else {
+            await interaction.reply({
+                content: 'Bu komut çalıştırılırken bir hata oluştu.',
+                ephemeral: true
+            }).catch(e => console.error('Hata mesajı gönderilirken hata:', e));
+        }
     }
 });
 
@@ -161,7 +172,7 @@ client.on('messageCreate', async message => {
     console.log(`[LOG] Bir prefixli komut kullanıldı: ${prefix}${commandName}`);
 
     try {
-        await command.execute(client, message, args);
+        await command.execute(message, args); // `client` parametresini kaldırdım, help komutu artık buna ihtiyaç duymuyor.
     } catch (error) {
         console.error('Komut çalıştırma hatası:', error);
         message.reply('Komut çalıştırılırken bir hata oluştu.');
