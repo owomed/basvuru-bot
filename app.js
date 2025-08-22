@@ -186,34 +186,20 @@ client.tarihHesapla = (date) => {
 };
 
 // --- Bot Durumunu Güncelleme ---
-const status
-    {
-        name: 'MED 🤎 OwO ile ilgileniyor',
-        type: ActivityType.Custom
-    }
-];
-
+// Sadece bir durum olduğu için tekil bir nesne olarak tanımlandı.
+const status = {
+    name: 'MED 🤎 OwO ile ilgileniyor',
+    type: ActivityType.Custom
+};
 
 client.on('ready', async () => {
     console.log(`[LOG] Bot ${client.user.tag} olarak aktif!`);
+    
+    // Botun durumu tek bir değere ayarlandı.
     client.user.setPresence({
-        activities: [{
-            name: statuses[0].name,
-            type: statuses[0].type
-        }],
-        status: 'dnd'
+        activities: [status],
+        status: 'idle'
     });
-
-    setInterval(() => {
-        statusIndex = (statusIndex + 1) % statuses.length;
-        client.user.setPresence({
-            activities: [{
-                name: statuses[statusIndex].name,
-                type: statuses[statusIndex].type
-            }],
-            status: 'dnd'
-        });
-    }, 10000);
 });
 
 // Botu Discord'a bağlayın
