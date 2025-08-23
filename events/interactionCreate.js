@@ -80,13 +80,15 @@ async function handleBasvuru(interaction) {
         customId
     } = interaction;
     
+    // Etkileşimi hemen deferReply ile onaylayarak 3 saniye sınırını kaldırıyoruz.
+    await interaction.deferReply({ flags: 64 });
+    
     // Debug için butondan gelen customId'yi logla
     console.log(`[DEBUG] handleBasvuru - Gelen butondaki customId: ${customId}`);
 
     if (!customId) {
         console.error('[HATA] Buton customId\'si bulunamadı. Lütfen buton oluşturma kodunu kontrol edin.');
-        // Burada return ile bitiriyoruz, çünkü geçersiz bir etkileşime yanıt veremeyiz.
-        return;
+        return interaction.editReply({ content: 'Buton verilerinde bir hata oluştu, lütfen bot sahibine bildirin.' });
     }
 
     const basvuruTuru = customId.includes('yetkili') ? 'Yetkili' : 'Helper';
@@ -166,10 +168,11 @@ async function handleBasvuru(interaction) {
     try {
         await interaction.showModal(modal);
         console.log(`[DEBUG] Başvuru modalı kullanıcıya gösterildi: ${modal.customId}`);
+        // showModal başarılı olursa deferReply'ı siler ve modalı gösterir.
     } catch (e) {
         console.error('[HATA] Başvuru modalı gösterilirken hata oluştu:', e);
-        // Bu hata durumunda `reply` yapmamalıyız çünkü etkileşim süresi dolmuştur.
-        // Sadece loglama yeterlidir.
+        // Hata oluşursa deferReply'ı düzenleyerek kullanıcıya bilgi verir.
+        await interaction.editReply({ content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.' });
     }
 }
 
@@ -380,6 +383,7 @@ async function processBasvuruModal(interaction) {
  * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
  */
 async function handleSoruTalep(interaction) {
+    await interaction.deferReply({ flags: 64 });
     const modal = new ModalBuilder()
         .setCustomId('soru-talep-modal')
         .setTitle('Soru Talep Formu');
@@ -392,7 +396,11 @@ async function handleSoruTalep(interaction) {
 
     modal.addComponents(new ActionRowBuilder().addComponents(questionInput));
 
-    await interaction.showModal(modal);
+    try {
+        await interaction.showModal(modal);
+    } catch (e) {
+        await interaction.editReply({ content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.' });
+    }
 }
 
 /**
@@ -482,6 +490,7 @@ async function processSoruTalepModal(interaction) {
  * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
  */
 async function handleGorus(interaction) {
+    await interaction.deferReply({ flags: 64 });
     const modal = new ModalBuilder()
         .setCustomId('gorus-modal')
         .setTitle('Üst Yetkiliyle Görüşme Talebi');
@@ -503,7 +512,11 @@ async function handleGorus(interaction) {
         new ActionRowBuilder().addComponents(detayInput)
     );
 
-    await interaction.showModal(modal);
+    try {
+        await interaction.showModal(modal);
+    } catch (e) {
+        await interaction.editReply({ content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.' });
+    }
 }
 
 /**
