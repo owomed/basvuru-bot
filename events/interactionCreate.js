@@ -91,53 +91,53 @@ async function handleBasvuru(interaction) {
             id: 'isim-yas-input',
             label: 'İsim ve yaşınız nedir?',
             required: true,
-            style: TextInputStyle.Short // Düzeltme: ButtonStyle.Short yerine TextInputStyle.Short
+            style: 'short' // Düzeltme: 'short' stringini kullan
         }, {
             id: 'neden-basvuru-input',
             label: 'Neden bu pozisyona başvuruyorsunuz?',
             required: true,
-            style: TextInputStyle.Paragraph // Düzeltme: ButtonStyle.Paragraph yerine TextInputStyle.Paragraph
+            style: 'paragraph' // Düzeltme: 'paragraph' stringini kullan
         }, {
             id: 'deneyim-input',
             label: 'Bir deneyiminiz var mı? Varsa anlatın.',
             required: false,
-            style: TextInputStyle.Paragraph // Düzeltme: ButtonStyle.Paragraph yerine TextInputStyle.Paragraph
+            style: 'paragraph' // Düzeltme
         }, {
             id: 'aktiflik-input',
             label: 'Sunucuda ne kadar aktif olabilirsiniz?',
             required: true,
-            style: TextInputStyle.Short // Düzeltme: ButtonStyle.Short yerine TextInputStyle.Short
+            style: 'short' // Düzeltme
         }, {
             id: 'neden-secilmeli-input',
             label: 'Neden sizi seçmeliyiz?',
             required: true,
-            style: TextInputStyle.Paragraph // Düzeltme: ButtonStyle.Paragraph yerine TextInputStyle.Paragraph
+            style: 'paragraph' // Düzeltme
         }],
         helperBaşvuru: [{
             id: 'isim-yas-input',
             label: 'İsim ve yaşınız nedir?',
             required: true,
-            style: TextInputStyle.Short // Düzeltme: ButtonStyle.Short yerine TextInputStyle.Short
+            style: 'short' // Düzeltme
         }, {
             id: 'helper-deneyim-input',
             label: 'Helper deneyiminiz var mı? Varsa anlatın.',
             required: false,
-            style: TextInputStyle.Paragraph // Düzeltme: ButtonStyle.Paragraph yerine TextInputStyle.Paragraph
+            style: 'paragraph' // Düzeltme
         }, {
             id: 'aktiflik-input',
             label: 'Sunucuda ne kadar aktif olabilirsiniz?',
             required: true,
-            style: TextInputStyle.Short // Düzeltme: ButtonStyle.Short yerine TextInputStyle.Short
+            style: 'short' // Düzeltme
         }, {
             id: 'owo-bilgi-input',
             label: 'OwO bot bilginiz nasıl?',
             required: true,
-            style: TextInputStyle.Short // Düzeltme: ButtonStyle.Short yerine TextInputStyle.Short
+            style: 'short' // Düzeltme
         }, {
             id: 'takim-meta-input',
             label: 'Takım metası bilginiz nedir?',
             required: true,
-            style: TextInputStyle.Paragraph // Düzeltme: ButtonStyle.Paragraph yerine TextInputStyle.Paragraph
+            style: 'paragraph' // Düzeltme
         }]
     };
 
@@ -145,7 +145,7 @@ async function handleBasvuru(interaction) {
         new TextInputBuilder()
         .setCustomId(q.id)
         .setLabel(q.label)
-        .setStyle(q.style) // ButtonStyle yerine doğrudan q.style kullanın, zaten TextInputStyle olarak ayarlandı
+        .setStyle(q.style === 'short' ? TextInputStyle.Short : TextInputStyle.Paragraph) // Düzeltme: String'e göre doğru sabiti ata
         .setRequired(q.required)
     );
 
