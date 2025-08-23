@@ -1,6 +1,6 @@
 const {
     SlashCommandBuilder,
-    MessageEmbed
+    EmbedBuilder
 } = require('discord.js');
 
 // Slash komutu için gerekli olan veriyi oluşturur.
@@ -38,7 +38,7 @@ module.exports = {
         const apiPing = Math.round(interactionOrMessage.client.ws.ping);
 
         // Mesajı düzenle ve gecikme bilgisini gönder
-        const embed = new MessageEmbed()
+        const embed = new EmbedBuilder()
             .setTitle('Gecikme')
             .setDescription(`Bot: **${ping}ms**\nAPI: **${apiPing}ms**`)
             .setColor('#00ff00')
