@@ -89,6 +89,15 @@ async function handleBasvuru(interaction) {
         return;
     }
 
+    // Modalı göstermeden önce etkileşimi ertele. Bu, botun zaman aşımına uğramasını engeller.
+    // Kullanıcıya bir şey görünmez, ancak botun 15 dakikalık bir işlem süresi olur.
+    try {
+        await interaction.deferUpdate();
+    } catch (e) {
+        console.error('[HATA] Etkileşim ertelenirken hata oluştu:', e);
+        return; // Hata durumunda fonksiyonu sonlandır.
+    }
+
     const basvuruTuru = customId.includes('yetkili') ? 'Yetkili' : 'Helper';
     const modalCustomId = customId.replace('Başvuru', '-basvuru-modal');
 
@@ -388,7 +397,8 @@ async function processBasvuruModal(interaction) {
  * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
  */
 async function handleSoruTalep(interaction) {
-    await interaction.deferReply({ flags: 64 });
+    // deferUpdate ile etkileşimi erteleme
+    await interaction.deferUpdate();
     const modal = new ModalBuilder()
         .setCustomId('soru-talep-modal')
         .setTitle('Soru Talep Formu');
@@ -404,7 +414,7 @@ async function handleSoruTalep(interaction) {
     try {
         await interaction.showModal(modal);
     } catch (e) {
-        await interaction.editReply({ content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.' });
+        await interaction.followUp({ content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.', ephemeral: true });
     }
 }
 
@@ -495,7 +505,8 @@ async function processSoruTalepModal(interaction) {
  * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
  */
 async function handleGorus(interaction) {
-    await interaction.deferReply({ flags: 64 });
+    // deferUpdate ile etkileşimi erteleme
+    await interaction.deferUpdate();
     const modal = new ModalBuilder()
         .setCustomId('gorus-modal')
         .setTitle('Üst Yetkiliyle Görüşme Talebi');
@@ -520,7 +531,7 @@ async function handleGorus(interaction) {
     try {
         await interaction.showModal(modal);
     } catch (e) {
-        await interaction.editReply({ content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.' });
+        await interaction.followUp({ content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.', ephemeral: true });
     }
 }
 
