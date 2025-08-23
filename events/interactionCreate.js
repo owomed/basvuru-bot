@@ -5,7 +5,8 @@
 const {
     MessageActionRow,
     ModalBuilder,
-    TextInputBuilder, // Modal ve TextInputComponent yerine Builder sınıflarını kullanın
+    TextInputBuilder,
+    TextInputStyle, // TextInputStyle doğru sabittir
     ButtonStyle,
     EmbedBuilder,
     PermissionsBitField,
@@ -90,53 +91,53 @@ async function handleBasvuru(interaction) {
             id: 'isim-yas-input',
             label: 'İsim ve yaşınız nedir?',
             required: true,
-            style: ButtonStyle.Short
+            style: TextInputStyle.Short // Düzeltme: ButtonStyle.Short yerine TextInputStyle.Short
         }, {
             id: 'neden-basvuru-input',
             label: 'Neden bu pozisyona başvuruyorsunuz?',
             required: true,
-            style: ButtonStyle.Paragraph
+            style: TextInputStyle.Paragraph // Düzeltme: ButtonStyle.Paragraph yerine TextInputStyle.Paragraph
         }, {
             id: 'deneyim-input',
             label: 'Bir deneyiminiz var mı? Varsa anlatın.',
             required: false,
-            style: ButtonStyle.Paragraph
+            style: TextInputStyle.Paragraph // Düzeltme: ButtonStyle.Paragraph yerine TextInputStyle.Paragraph
         }, {
             id: 'aktiflik-input',
             label: 'Sunucuda ne kadar aktif olabilirsiniz?',
             required: true,
-            style: ButtonStyle.Short
+            style: TextInputStyle.Short // Düzeltme: ButtonStyle.Short yerine TextInputStyle.Short
         }, {
             id: 'neden-secilmeli-input',
             label: 'Neden sizi seçmeliyiz?',
             required: true,
-            style: ButtonStyle.Paragraph
+            style: TextInputStyle.Paragraph // Düzeltme: ButtonStyle.Paragraph yerine TextInputStyle.Paragraph
         }],
         helperBaşvuru: [{
             id: 'isim-yas-input',
             label: 'İsim ve yaşınız nedir?',
             required: true,
-            style: ButtonStyle.Short
+            style: TextInputStyle.Short // Düzeltme: ButtonStyle.Short yerine TextInputStyle.Short
         }, {
             id: 'helper-deneyim-input',
             label: 'Helper deneyiminiz var mı? Varsa anlatın.',
             required: false,
-            style: ButtonStyle.Paragraph
+            style: TextInputStyle.Paragraph // Düzeltme: ButtonStyle.Paragraph yerine TextInputStyle.Paragraph
         }, {
             id: 'aktiflik-input',
             label: 'Sunucuda ne kadar aktif olabilirsiniz?',
             required: true,
-            style: ButtonStyle.Short
+            style: TextInputStyle.Short // Düzeltme: ButtonStyle.Short yerine TextInputStyle.Short
         }, {
             id: 'owo-bilgi-input',
             label: 'OwO bot bilginiz nasıl?',
             required: true,
-            style: ButtonStyle.Short
+            style: TextInputStyle.Short // Düzeltme: ButtonStyle.Short yerine TextInputStyle.Short
         }, {
             id: 'takim-meta-input',
             label: 'Takım metası bilginiz nedir?',
             required: true,
-            style: ButtonStyle.Paragraph
+            style: TextInputStyle.Paragraph // Düzeltme: ButtonStyle.Paragraph yerine TextInputStyle.Paragraph
         }]
     };
 
@@ -144,7 +145,7 @@ async function handleBasvuru(interaction) {
         new TextInputBuilder()
         .setCustomId(q.id)
         .setLabel(q.label)
-        .setStyle(q.style) // ButtonStyle.Short, ButtonStyle.Paragraph
+        .setStyle(q.style) // ButtonStyle yerine doğrudan q.style kullanın, zaten TextInputStyle olarak ayarlandı
         .setRequired(q.required)
     );
 
@@ -338,14 +339,14 @@ async function processBasvuruModal(interaction) {
  * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
  */
 async function handleSoruTalep(interaction) {
-    const modal = new ModalBuilder() // Modal yerine ModalBuilder kullanın
+    const modal = new ModalBuilder()
         .setCustomId('soru-talep-modal')
         .setTitle('Soru Talep Formu');
 
-    const questionInput = new TextInputBuilder() // TextInputComponent yerine TextInputBuilder kullanın
+    const questionInput = new TextInputBuilder()
         .setCustomId('soru-input')
         .setLabel('Sorunuzu buraya yazın')
-        .setStyle(ButtonStyle.Paragraph)
+        .setStyle(TextInputStyle.Paragraph) // Düzeltme
         .setRequired(true);
 
     modal.addComponents(new MessageActionRow().addComponents(questionInput));
@@ -440,20 +441,20 @@ async function processSoruTalepModal(interaction) {
  * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
  */
 async function handleGorus(interaction) {
-    const modal = new ModalBuilder() // Modal yerine ModalBuilder kullanın
+    const modal = new ModalBuilder()
         .setCustomId('gorus-modal')
         .setTitle('Üst Yetkiliyle Görüşme Talebi');
 
-    const konuInput = new TextInputBuilder() // TextInputComponent yerine TextInputBuilder kullanın
+    const konuInput = new TextInputBuilder()
         .setCustomId('konu-input')
         .setLabel('Görüşme konunuz nedir?')
-        .setStyle(ButtonStyle.Short)
+        .setStyle(TextInputStyle.Short) // Düzeltme
         .setRequired(true);
 
-    const detayInput = new TextInputBuilder() // TextInputComponent yerine TextInputBuilder kullanın
+    const detayInput = new TextInputBuilder()
         .setCustomId('detay-input')
         .setLabel('Detaylı açıklamanız.')
-        .setStyle(ButtonStyle.Paragraph)
+        .setStyle(TextInputStyle.Paragraph) // Düzeltme
         .setRequired(true);
 
     modal.addComponents(
