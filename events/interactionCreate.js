@@ -171,6 +171,7 @@ async function handleBasvuru(interaction) {
  * @param {import('discord.js').ModalSubmitInteraction} interaction - Gelen modal etkileşimi.
  */
 async function processBasvuruModal(interaction) {
+    // Etkileşim yanıtı gönderiliyor, bu "düşünüyor..." mesajını kaldırır.
     await interaction.deferReply({
         ephemeral: true
     });
@@ -238,10 +239,6 @@ async function processBasvuruModal(interaction) {
 
     const CATEGORY_ID = '1268509251911811175';
 
-    // Kullanıcı adını küçük harfe çevir ve Discord kanal adı kurallarına uygun hale getir.
-    const cleanUsername = user.username.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
-    const channelName = `${config.namePrefix}${cleanUsername}`;
-
     // Başvuru sonuçlarını içeren embed oluştur
     const embed = new EmbedBuilder()
         .setTitle(`${config.applicationType} Başvuru`)
@@ -288,12 +285,14 @@ async function processBasvuruModal(interaction) {
     await sentMessage.react(EMOJI_RED_ID);
 
     // Başvurunun durumunu takip etmek için özel bir filtre oluştur
-    const filter = (reaction, user) => {
-        return (reaction.emoji.id === EMOJI_ONAY_ID || reaction.emoji.id === EMOJI_RED_ID) &&
-            config.requiredRoles.some(roleId =>
-                interaction.guild.members.cache.get(user.id).roles.cache.has(roleId)
-            );
+    const filter = (reaction, reactor) => {
+        const isCorrectEmoji = reaction.emoji.id === EMOJI_ONAY_ID || reaction.emoji.id === EMOJI_RED_ID;
+        const isAuthorizedUser = config.requiredRoles.some(roleId =>
+            interaction.guild.members.cache.get(reactor.id).roles.cache.has(roleId)
+        );
+        return isCorrectEmoji && isAuthorizedUser;
     };
+
 
     // Mesaj üzerinde reaksiyonları bekle
     const collector = sentMessage.createReactionCollector({
@@ -302,20 +301,20 @@ async function processBasvuruModal(interaction) {
         time: 3600000
     }); // 1 saat bekleme süresi
 
-    collector.on('collect', async (reaction, user) => {
+    collector.on('collect', async (reaction, reactor) => {
         const isApproved = reaction.emoji.id === EMOJI_ONAY_ID;
         const statusText = isApproved ? 'ONAYLANDI' : 'REDDEDİLDİ';
 
         const finalEmbed = new EmbedBuilder()
             .setTitle(`${config.applicationType} Başvuru`)
             .setAuthor({
-                name: interaction.user.tag,
-                iconURL: interaction.user.displayAvatarURL()
+                name: user.tag, // Başvuru yapan kullanıcının etiketini kullan
+                iconURL: user.displayAvatarURL()
             })
             .setDescription(`**Başvuru Sonuçlandı!**`)
             .addFields({
                 name: `Başvuru Durumu`,
-                value: `Başvurunuz, <@${user.id}> tarafından **${statusText}**`
+                value: `Başvurunuz, <@${reactor.id}> tarafından **${statusText}**`
             })
             .setColor(isApproved ? '#2ecc71' : '#e74c3c')
             .setFooter({
