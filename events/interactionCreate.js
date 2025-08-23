@@ -79,23 +79,13 @@ async function handleBasvuru(interaction) {
     const {
         customId
     } = interaction;
-    
+
     // Debug için butondan gelen customId'yi logla
     console.log(`[DEBUG] handleBasvuru - Gelen butondaki customId: ${customId}`);
 
     if (!customId) {
         console.error('[HATA] Buton customId\'si bulunamadı. Lütfen buton oluşturma kodunu kontrol edin.');
-        // Bu hata durumunda deferReply kullanmak yerine doğrudan return ile bitiriyoruz.
         return;
-    }
-
-    // Modalı göstermeden önce etkileşimi ertele. Bu, botun zaman aşımına uğramasını engeller.
-    // Kullanıcıya bir şey görünmez, ancak botun 15 dakikalık bir işlem süresi olur.
-    try {
-        await interaction.deferUpdate();
-    } catch (e) {
-        console.error('[HATA] Etkileşim ertelenirken hata oluştu:', e);
-        return; // Hata durumunda fonksiyonu sonlandır.
     }
 
     const basvuruTuru = customId.includes('yetkili') ? 'Yetkili' : 'Helper';
@@ -171,19 +161,20 @@ async function handleBasvuru(interaction) {
     // Tüm text inputları action row'lara ekle
     textInputs.forEach(input => modal.addComponents(new ActionRowBuilder().addComponents(input)));
 
-    // Modal'ı kullanıcıya göster. Bu, buton tıklamasına doğrudan bir yanıttır.
-    // Bu, Discord'a gönderilmesi gereken ilk ve tek yanıttır.
+    // Modal'ı kullanıcıya göster. Bu, buton tıklamasına doğrudan bir yanıttır ve önceden herhangi bir deferReply veya deferUpdate yapılmamalıdır.
     try {
         await interaction.showModal(modal);
         console.log(`[DEBUG] Başvuru modalı kullanıcıya gösterildi: ${modal.customId}`);
     } catch (e) {
         console.error('[HATA] Başvuru modalı gösterilirken hata oluştu:', e);
-        // showModal() zaman aşımı nedeniyle başarısız olursa,
-        // interaction nesnesi geçersizleşir ve tekrar yanıt verilemez.
-        // Bu nedenle, bu bloktaki "reply" komutu da genellikle hata verecektir.
-        // Bu bir kod hatası değil, Discord API'nin zaman aşımı kuralının bir sonucudur.
+        // Bu hata genellikle 3 saniyelik zaman aşımı nedeniyle oluşur.
+        // Hata durumunda kullanıcıya bilgilendirici bir mesaj gönderilir.
         try {
-            await interaction.reply({ content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.', ephemeral: true });
+            // "ephemeral" bayrağı kullanmak yerine "flags" ile belirttik.
+            await interaction.reply({
+                content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.',
+                ephemeral: true
+            });
         } catch (replyError) {
             console.error('[HATA] Hata mesajı gönderilemedi:', replyError);
         }
@@ -196,7 +187,6 @@ async function handleBasvuru(interaction) {
  * @param {import('discord.js').ModalSubmitInteraction} interaction - Gelen modal etkileşimi.
  */
 async function processBasvuruModal(interaction) {
-    // Modal submit işlemi için deferReply kullanmak doğru bir yaklaşımdır.
     await interaction.deferReply({
         flags: 64
     });
@@ -397,8 +387,6 @@ async function processBasvuruModal(interaction) {
  * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
  */
 async function handleSoruTalep(interaction) {
-    // deferUpdate ile etkileşimi erteleme
-    await interaction.deferUpdate();
     const modal = new ModalBuilder()
         .setCustomId('soru-talep-modal')
         .setTitle('Soru Talep Formu');
@@ -414,7 +402,10 @@ async function handleSoruTalep(interaction) {
     try {
         await interaction.showModal(modal);
     } catch (e) {
-        await interaction.followUp({ content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.', ephemeral: true });
+        await interaction.reply({
+            content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.',
+            ephemeral: true
+        });
     }
 }
 
@@ -505,8 +496,6 @@ async function processSoruTalepModal(interaction) {
  * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
  */
 async function handleGorus(interaction) {
-    // deferUpdate ile etkileşimi erteleme
-    await interaction.deferUpdate();
     const modal = new ModalBuilder()
         .setCustomId('gorus-modal')
         .setTitle('Üst Yetkiliyle Görüşme Talebi');
@@ -531,7 +520,10 @@ async function handleGorus(interaction) {
     try {
         await interaction.showModal(modal);
     } catch (e) {
-        await interaction.followUp({ content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.', ephemeral: true });
+        await interaction.reply({
+            content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.',
+            ephemeral: true
+        });
     }
 }
 
