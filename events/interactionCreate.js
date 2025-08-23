@@ -80,15 +80,13 @@ async function handleBasvuru(interaction) {
         customId
     } = interaction;
     
-    // Etkileşimi hemen deferReply ile onaylayarak 3 saniye sınırını kaldırıyoruz.
-    await interaction.deferReply({ flags: 64 });
-    
     // Debug için butondan gelen customId'yi logla
     console.log(`[DEBUG] handleBasvuru - Gelen butondaki customId: ${customId}`);
 
     if (!customId) {
         console.error('[HATA] Buton customId\'si bulunamadı. Lütfen buton oluşturma kodunu kontrol edin.');
-        return interaction.editReply({ content: 'Buton verilerinde bir hata oluştu, lütfen bot sahibine bildirin.' });
+        // Bu hata durumunda deferReply kullanmak yerine doğrudan return ile bitiriyoruz.
+        return;
     }
 
     const basvuruTuru = customId.includes('yetkili') ? 'Yetkili' : 'Helper';
@@ -164,15 +162,15 @@ async function handleBasvuru(interaction) {
     // Tüm text inputları action row'lara ekle
     textInputs.forEach(input => modal.addComponents(new ActionRowBuilder().addComponents(input)));
 
-    // Modal'ı kullanıcıya göster
+    // Modal'ı kullanıcıya göster. Bu, buton tıklamasına doğrudan bir yanıttır.
     try {
         await interaction.showModal(modal);
         console.log(`[DEBUG] Başvuru modalı kullanıcıya gösterildi: ${modal.customId}`);
-        // showModal başarılı olursa deferReply'ı siler ve modalı gösterir.
     } catch (e) {
         console.error('[HATA] Başvuru modalı gösterilirken hata oluştu:', e);
-        // Hata oluşursa deferReply'ı düzenleyerek kullanıcıya bilgi verir.
-        await interaction.editReply({ content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.' });
+        // Bu hata genellikle 3 saniyelik zaman aşımından kaynaklanır.
+        // Hata durumunda kullanıcıya bir mesaj göndererek bilgi verebiliriz.
+        await interaction.reply({ content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.', ephemeral: true });
     }
 }
 
@@ -182,7 +180,7 @@ async function handleBasvuru(interaction) {
  * @param {import('discord.js').ModalSubmitInteraction} interaction - Gelen modal etkileşimi.
  */
 async function processBasvuruModal(interaction) {
-    // Etkileşim yanıtı gönderiliyor, bu "düşünüyor..." mesajını kaldırır.
+    // Modal submit işlemi için deferReply kullanmak doğru bir yaklaşımdır.
     await interaction.deferReply({
         flags: 64
     });
