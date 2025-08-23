@@ -85,7 +85,8 @@ async function handleBasvuru(interaction) {
 
     if (!customId) {
         console.error('[HATA] Buton customId\'si bulunamadı. Lütfen buton oluşturma kodunu kontrol edin.');
-        return interaction.reply({ content: 'Buton verilerinde bir hata oluştu, lütfen bot sahibine bildirin.', flags: 64 });
+        // Burada return ile bitiriyoruz, çünkü geçersiz bir etkileşime yanıt veremeyiz.
+        return;
     }
 
     const basvuruTuru = customId.includes('yetkili') ? 'Yetkili' : 'Helper';
@@ -109,7 +110,7 @@ async function handleBasvuru(interaction) {
         }, {
             id: 'deneyim-input',
             label: 'Bir deneyiminiz var mı? Varsa anlatın.',
-            required: true,
+            required: false,
             style: 'paragraph'
         }, {
             id: 'aktiflik-input',
@@ -130,7 +131,7 @@ async function handleBasvuru(interaction) {
         }, {
             id: 'helper-deneyim-input',
             label: 'Helper deneyiminiz var mı? Varsa anlatın.',
-            required: true,
+            required: false,
             style: 'paragraph'
         }, {
             id: 'aktiflik-input',
@@ -167,10 +168,8 @@ async function handleBasvuru(interaction) {
         console.log(`[DEBUG] Başvuru modalı kullanıcıya gösterildi: ${modal.customId}`);
     } catch (e) {
         console.error('[HATA] Başvuru modalı gösterilirken hata oluştu:', e);
-        await interaction.reply({
-            content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.',
-            flags: 64
-        });
+        // Bu hata durumunda `reply` yapmamalıyız çünkü etkileşim süresi dolmuştur.
+        // Sadece loglama yeterlidir.
     }
 }
 
