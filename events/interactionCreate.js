@@ -324,14 +324,23 @@ async function processBasvuruModal(interaction) {
             .setTimestamp();
 
         // Başvuru sonuç kanalına final mesajını gönder
+        console.log(`[DEBUG] Sonuç mesajı gönderiliyor. Sonuç kanalı ID: 1277638999464214558`);
         const finalResultChannel = client.channels.cache.get('1277638999464214558');
+
         if (finalResultChannel) {
-            await finalResultChannel.send({
-                content: `**Başvuru Sonuçlandı!**`,
-                embeds: [finalEmbed]
-            });
+            try {
+                await finalResultChannel.send({
+                    content: `**Başvuru Sonuçlandı!**`,
+                    embeds: [finalEmbed]
+                });
+                console.log(`[DEBUG] Sonuç mesajı başarıyla gönderildi.`);
+            } catch (error) {
+                console.error(`[HATA] Sonuç mesajı gönderilemedi! Hata:`, error);
+            }
+        } else {
+            console.error('[KRİTİK HATA] Sonuç kanalı bulunamadı!');
         }
-        
+
         // Orijinal başvuru mesajındaki emojileri kaldır
         await sentMessage.reactions.removeAll().catch(error => console.error('Emojiler kaldırılamadı:', error));
     });
