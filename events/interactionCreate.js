@@ -286,10 +286,14 @@ async function processBasvuruModal(interaction) {
 
     // Başvurunun durumunu takip etmek için özel bir filtre oluştur
     const filter = (reaction, reactor) => {
+        console.log(`[DEBUG] Reaksiyon filtresi tetiklendi.`);
         const isCorrectEmoji = reaction.emoji.id === EMOJI_ONAY_ID || reaction.emoji.id === EMOJI_RED_ID;
-        const isAuthorizedUser = config.requiredRoles.some(roleId =>
-            interaction.guild.members.cache.get(reactor.id).roles.cache.has(roleId)
-        );
+        console.log(`[DEBUG] Emoji doğru mu? ${isCorrectEmoji}`);
+        
+        const member = interaction.guild.members.cache.get(reactor.id);
+        const isAuthorizedUser = member && config.requiredRoles.some(roleId => member.roles.cache.has(roleId));
+        console.log(`[DEBUG] Kullanıcı yetkili mi? ${isAuthorizedUser}`);
+
         return isCorrectEmoji && isAuthorizedUser;
     };
 
@@ -302,6 +306,8 @@ async function processBasvuruModal(interaction) {
     }); // 1 saat bekleme süresi
 
     collector.on('collect', async (reaction, reactor) => {
+        console.log(`[DEBUG] Reaksiyon toplandı! Kullanıcı: ${reactor.tag}`);
+
         const isApproved = reaction.emoji.id === EMOJI_ONAY_ID;
         const statusText = isApproved ? 'ONAYLANDI' : 'REDDEDİLDİ';
 
@@ -346,6 +352,7 @@ async function processBasvuruModal(interaction) {
     });
 
     collector.on('end', collected => {
+        console.log(`[DEBUG] Toplayıcı sona erdi. Toplanan reaksiyon sayısı: ${collected.size}`);
         if (collected.size === 0) {
             // Süre dolduğunda veya toplanan reaksiyon olmadığında
             sentMessage.reactions.removeAll().catch(error => console.error('Emojiler kaldırılamadı:', error));
