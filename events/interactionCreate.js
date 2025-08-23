@@ -163,14 +163,21 @@ async function handleBasvuru(interaction) {
     textInputs.forEach(input => modal.addComponents(new ActionRowBuilder().addComponents(input)));
 
     // Modal'ı kullanıcıya göster. Bu, buton tıklamasına doğrudan bir yanıttır.
+    // Bu, Discord'a gönderilmesi gereken ilk ve tek yanıttır.
     try {
         await interaction.showModal(modal);
         console.log(`[DEBUG] Başvuru modalı kullanıcıya gösterildi: ${modal.customId}`);
     } catch (e) {
         console.error('[HATA] Başvuru modalı gösterilirken hata oluştu:', e);
-        // Bu hata genellikle 3 saniyelik zaman aşımından kaynaklanır.
-        // Hata durumunda kullanıcıya bir mesaj göndererek bilgi verebiliriz.
-        await interaction.reply({ content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.', ephemeral: true });
+        // showModal() zaman aşımı nedeniyle başarısız olursa,
+        // interaction nesnesi geçersizleşir ve tekrar yanıt verilemez.
+        // Bu nedenle, bu bloktaki "reply" komutu da genellikle hata verecektir.
+        // Bu bir kod hatası değil, Discord API'nin zaman aşımı kuralının bir sonucudur.
+        try {
+            await interaction.reply({ content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.', ephemeral: true });
+        } catch (replyError) {
+            console.error('[HATA] Hata mesajı gönderilemedi:', replyError);
+        }
     }
 }
 
