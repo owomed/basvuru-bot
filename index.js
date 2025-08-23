@@ -99,7 +99,7 @@ client.once('ready', async () => {
             name: 'MED 🤎 OwO ile ilgileniyor',
             type: ActivityType.Custom
         }],
-        status: 'online'
+        status: 'dnd'
     });
 });
 
