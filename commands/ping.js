@@ -1,53 +1,52 @@
 const {
-  SlashCommandBuilder,
-  MessageEmbed
+    SlashCommandBuilder,
+    MessageEmbed
 } = require('discord.js');
 
 // Slash komutu için gerekli olan veriyi oluşturur.
 const slashCommandData = new SlashCommandBuilder()
-  .setName('ping')
-  .setDescription('Botun gecikmesini hesaplar.');
+    .setName('ping')
+    .setDescription('Botun gecikmesini hesaplar.');
 
 module.exports = {
-  // Komutun hem slash hem de prefix komutlarında ortak olarak çalışacak olan işlevi.
-  // interaction, slash komutlarında, message ise prefix komutlarında kullanılır.
-  async execute(interactionOrMessage) {
-    // Mesaj veya etkileşimden hangisi olduğunu kontrol et
-    const isSlashCommand = interactionOrMessage.isCommand();
-    const replyTarget = isSlashCommand ? interactionOrMessage : interactionOrMessage;
+    name: 'ping', // Ön ekli (prefix) komutlar için ad
+    aliases: ['p'], // Ön ekli (prefix) komutlar için takma adlar
+    data: slashCommandData, // Slash komut verisi
 
-    // Ping hesaplama mesajını gönder
-    let sentMessage;
-    if (isSlashCommand) {
-      // Slash komutlarında önce deferred reply (gecikmeli yanıt) kullanılır
-      await replyTarget.deferReply({
-        ephemeral: false
-      });
-      sentMessage = await replyTarget.editReply({
-        content: '`Ping hesaplanıyor...`'
-      });
-    } else {
-      sentMessage = await replyTarget.reply({
-        content: '`Ping hesaplanıyor...`'
-      });
-    }
+    // Komutun hem slash hem de prefix komutlarında ortak olarak çalışacak olan işlevi.
+    async execute(interactionOrMessage) {
+        // Objenin türünü kontrol edin
+        const isSlashCommand = interactionOrMessage.isChatInputCommand ? interactionOrMessage.isChatInputCommand() : false;
+        const replyTarget = interactionOrMessage;
 
-    const ping = sentMessage.createdTimestamp - interactionOrMessage.createdTimestamp;
-    const apiPing = Math.round(interactionOrMessage.client.ws.ping);
+        // Ping hesaplama mesajını gönder
+        let sentMessage;
+        if (isSlashCommand) {
+            await replyTarget.deferReply({
+                ephemeral: false
+            });
+            sentMessage = await replyTarget.editReply({
+                content: '`Ping hesaplanıyor...`'
+            });
+        } else {
+            sentMessage = await replyTarget.reply({
+                content: '`Ping hesaplanıyor...`'
+            });
+        }
 
-    const embed = new MessageEmbed()
-      .setTitle('Gecikme')
-      .setDescription(`Bot: **${ping}ms**\nAPI: **${apiPing}ms**`)
-      .setColor('#00ff00')
-      .setTimestamp();
+        const ping = sentMessage.createdTimestamp - interactionOrMessage.createdTimestamp;
+        const apiPing = Math.round(interactionOrMessage.client.ws.ping);
 
-    // Mesajı düzenle ve gecikme bilgisini gönder
-    await sentMessage.edit({
-      content: '`Ping hesaplandı:`',
-      embeds: [embed]
-    });
-  },
+        // Mesajı düzenle ve gecikme bilgisini gönder
+        const embed = new MessageEmbed()
+            .setTitle('Gecikme')
+            .setDescription(`Bot: **${ping}ms**\nAPI: **${apiPing}ms**`)
+            .setColor('#00ff00')
+            .setTimestamp();
 
-  // Slash komut verisi
-  data: slashCommandData,
+        await sentMessage.edit({
+            content: '`Ping hesaplandı:`',
+            embeds: [embed]
+        });
+    },
 };
