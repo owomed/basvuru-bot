@@ -1,64 +1,70 @@
 const {
-  joinVoiceChannel
+    joinVoiceChannel
 } = require('@discordjs/voice');
 const {
-  SlashCommandBuilder,
-  ChannelType
+    SlashCommandBuilder,
+    ChannelType
 } = require('discord.js');
 
 // Slash komutu için gerekli olan veriyi oluşturur.
 const slashCommandData = new SlashCommandBuilder()
-  .setName('basvuruses')
-  .setDescription('Botun belirli bir ses kanalına katılmasını sağlar.')
-  .addChannelOption(option =>
-    option.setName('kanal')
-    .setDescription('Botun katılacağı ses kanalı.')
-    .setRequired(true)
-    .addChannelTypes(ChannelType.GuildVoice)
-  );
+    .setName('basvuruses')
+    .setDescription('Botun belirli bir ses kanalına katılmasını sağlar.')
+    .addChannelOption(option =>
+        option.setName('kanal')
+        .setDescription('Botun katılacağı ses kanalı.')
+        .setRequired(true)
+        .addChannelTypes(ChannelType.GuildVoice)
+    );
 
 module.exports = {
-  // Komutun hem slash hem de prefix komutlarında ortak olarak çalışacak olan işlevi.
-  async execute(interactionOrMessage) {
-    const isSlashCommand = interactionOrMessage.isCommand();
-    const replyTarget = isSlashCommand ? interactionOrMessage : interactionOrMessage;
+    name: 'basvuruses', // Ön ekli (prefix) komutlar için ad
+    aliases: ['basvur', 'ses'], // Ön ekli (prefix) komutlar için takma adlar
+    data: slashCommandData, // Slash komut verisi
 
-    // Eğer slash komutuysa, `interaction.options.getChannel()` ile kanalı alıyoruz.
-    // Prefix komutuysa, önceden tanımlanmış sabit ID'yi kullanıyoruz.
-    const channelId = isSlashCommand ?
-      interactionOrMessage.options.getChannel('kanal').id :
-      '1243483710670635079'; // Ses kanalının ID'sini buraya ekleyin
+    // Komutun hem slash hem de prefix komutlarında ortak olarak çalışacak olan işlevi.
+    async execute(interactionOrMessage) {
+        // Objenin türünü kontrol edin
+        const isSlashCommand = interactionOrMessage.isChatInputCommand ? interactionOrMessage.isChatInputCommand() : false;
+        const replyTarget = interactionOrMessage;
 
-    const voiceChannel = interactionOrMessage.guild.channels.cache.get(channelId);
+        let channelId;
 
-    if (!voiceChannel || voiceChannel.type !== ChannelType.GuildVoice) {
-      return replyTarget.reply({
-        content: 'Belirtilen ses kanalı bulunamadı veya geçerli bir ses kanalı değil.',
-        ephemeral: true
-      });
-    }
+        if (isSlashCommand) {
+            // Eğer slash komutuysa, `interaction.options.getChannel()` ile kanalı alıyoruz.
+            channelId = interactionOrMessage.options.getChannel('kanal').id;
+        } else {
+            // Ön ekli komutlar için varsayılan bir kanal ID'si kullanılıyor
+            channelId = '1243483710670635079'; // Ses kanalının ID'sini buraya ekleyin
+        }
 
-    try {
-      const connection = joinVoiceChannel({
-        channelId: voiceChannel.id,
-        guildId: voiceChannel.guild.id,
-        adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-      });
+        const voiceChannel = interactionOrMessage.guild.channels.cache.get(channelId);
 
-      // Bağlantı başarılıysa mesaj gönder
-      await replyTarget.reply({
-        content: `\`Bot ${voiceChannel.name} adlı ses kanalına katıldı.\``
-      });
+        if (!voiceChannel || voiceChannel.type !== ChannelType.GuildVoice) {
+            return replyTarget.reply({
+                content: 'Belirtilen ses kanalı bulunamadı veya geçerli bir ses kanalı değil.',
+                ephemeral: true
+            });
+        }
 
-    } catch (error) {
-      console.error('Ses kanalına katılma hatası:', error);
-      await replyTarget.reply({
-        content: 'Ses kanalına katılırken bir hata oluştu. Lütfen yetkileri kontrol edin.',
-        ephemeral: true
-      });
-    }
-  },
+        try {
+            const connection = joinVoiceChannel({
+                channelId: voiceChannel.id,
+                guildId: voiceChannel.guild.id,
+                adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+            });
 
-  // Slash komut verisi
-  data: slashCommandData,
+            // Bağlantı başarılıysa mesaj gönder
+            await replyTarget.reply({
+                content: `\`Bot ${voiceChannel.name} adlı ses kanalına katıldı.\``
+            });
+
+        } catch (error) {
+            console.error('Ses kanalına katılma hatası:', error);
+            await replyTarget.reply({
+                content: 'Ses kanalına katılırken bir hata oluştu. Lütfen yetkileri kontrol edin.',
+                ephemeral: true
+            });
+        }
+    },
 };
