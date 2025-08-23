@@ -79,6 +79,15 @@ async function handleBasvuru(interaction) {
     const {
         customId
     } = interaction;
+    
+    // Debug için butondan gelen customId'yi logla
+    console.log(`[DEBUG] handleBasvuru - Gelen butondaki customId: ${customId}`);
+
+    if (!customId) {
+        console.error('[HATA] Buton customId\'si bulunamadı. Lütfen buton oluşturma kodunu kontrol edin.');
+        return interaction.reply({ content: 'Buton verilerinde bir hata oluştu, lütfen bot sahibine bildirin.', flags: 64 });
+    }
+
     const basvuruTuru = customId.includes('yetkili') ? 'Yetkili' : 'Helper';
     const modalCustomId = customId.replace('Başvuru', '-basvuru-modal');
 
@@ -160,7 +169,7 @@ async function handleBasvuru(interaction) {
         console.error('[HATA] Başvuru modalı gösterilirken hata oluştu:', e);
         await interaction.reply({
             content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.',
-            ephemeral: true
+            flags: 64
         });
     }
 }
@@ -173,7 +182,7 @@ async function handleBasvuru(interaction) {
 async function processBasvuruModal(interaction) {
     // Etkileşim yanıtı gönderiliyor, bu "düşünüyor..." mesajını kaldırır.
     await interaction.deferReply({
-        ephemeral: true
+        flags: 64
     });
     const {
         user,
@@ -291,6 +300,8 @@ async function processBasvuruModal(interaction) {
         console.log(`[DEBUG] Emoji doğru mu? ${isCorrectEmoji}`);
         
         const member = interaction.guild.members.cache.get(reactor.id);
+        console.log(`[DEBUG] Reaksiyonu yapan kullanıcının ID'si: ${reactor.id}, Üye nesnesi bulundu mu? ${!!member}`);
+
         const isAuthorizedUser = member && config.requiredRoles.some(roleId => member.roles.cache.has(roleId));
         console.log(`[DEBUG] Kullanıcı yetkili mi? ${isAuthorizedUser}`);
 
@@ -391,7 +402,7 @@ async function handleSoruTalep(interaction) {
  */
 async function processSoruTalepModal(interaction) {
     await interaction.deferReply({
-        ephemeral: true
+        flags: 64
     });
     const {
         user,
@@ -502,7 +513,7 @@ async function handleGorus(interaction) {
  */
 async function processGorusModal(interaction) {
     await interaction.deferReply({
-        ephemeral: true
+        flags: 64
     });
     const {
         user,
