@@ -3,10 +3,10 @@
 // Discord.js v14 ile uyumludur.
 
 const {
-    MessageActionRow,
+    ActionRowBuilder, // MessageActionRow yerine ActionRowBuilder kullanıldı
     ModalBuilder,
     TextInputBuilder,
-    TextInputStyle, // TextInputStyle doğru sabittir
+    TextInputStyle,
     ButtonStyle,
     EmbedBuilder,
     PermissionsBitField,
@@ -91,53 +91,53 @@ async function handleBasvuru(interaction) {
             id: 'isim-yas-input',
             label: 'İsim ve yaşınız nedir?',
             required: true,
-            style: 'short' // Düzeltme: 'short' stringini kullan
+            style: 'short'
         }, {
             id: 'neden-basvuru-input',
             label: 'Neden bu pozisyona başvuruyorsunuz?',
             required: true,
-            style: 'paragraph' // Düzeltme: 'paragraph' stringini kullan
+            style: 'paragraph'
         }, {
             id: 'deneyim-input',
             label: 'Bir deneyiminiz var mı? Varsa anlatın.',
             required: false,
-            style: 'paragraph' // Düzeltme
+            style: 'paragraph'
         }, {
             id: 'aktiflik-input',
             label: 'Sunucuda ne kadar aktif olabilirsiniz?',
             required: true,
-            style: 'short' // Düzeltme
+            style: 'short'
         }, {
             id: 'neden-secilmeli-input',
             label: 'Neden sizi seçmeliyiz?',
             required: true,
-            style: 'paragraph' // Düzeltme
+            style: 'paragraph'
         }],
         helperBaşvuru: [{
             id: 'isim-yas-input',
             label: 'İsim ve yaşınız nedir?',
             required: true,
-            style: 'short' // Düzeltme
+            style: 'short'
         }, {
             id: 'helper-deneyim-input',
             label: 'Helper deneyiminiz var mı? Varsa anlatın.',
             required: false,
-            style: 'paragraph' // Düzeltme
+            style: 'paragraph'
         }, {
             id: 'aktiflik-input',
             label: 'Sunucuda ne kadar aktif olabilirsiniz?',
             required: true,
-            style: 'short' // Düzeltme
+            style: 'short'
         }, {
             id: 'owo-bilgi-input',
             label: 'OwO bot bilginiz nasıl?',
             required: true,
-            style: 'short' // Düzeltme
+            style: 'short'
         }, {
             id: 'takim-meta-input',
             label: 'Takım metası bilginiz nedir?',
             required: true,
-            style: 'paragraph' // Düzeltme
+            style: 'paragraph'
         }]
     };
 
@@ -145,12 +145,12 @@ async function handleBasvuru(interaction) {
         new TextInputBuilder()
         .setCustomId(q.id)
         .setLabel(q.label)
-        .setStyle(q.style === 'short' ? TextInputStyle.Short : TextInputStyle.Paragraph) // Düzeltme: String'e göre doğru sabiti ata
+        .setStyle(q.style === 'short' ? TextInputStyle.Short : TextInputStyle.Paragraph)
         .setRequired(q.required)
     );
 
     // Tüm text inputları action row'lara ekle
-    textInputs.forEach(input => modal.addComponents(new MessageActionRow().addComponents(input)));
+    textInputs.forEach(input => modal.addComponents(new ActionRowBuilder().addComponents(input))); // MessageActionRow yerine ActionRowBuilder kullanıldı
 
     // Modal'ı kullanıcıya göster
     try {
@@ -346,10 +346,10 @@ async function handleSoruTalep(interaction) {
     const questionInput = new TextInputBuilder()
         .setCustomId('soru-input')
         .setLabel('Sorunuzu buraya yazın')
-        .setStyle(TextInputStyle.Paragraph) // Düzeltme
+        .setStyle(TextInputStyle.Paragraph)
         .setRequired(true);
 
-    modal.addComponents(new MessageActionRow().addComponents(questionInput));
+    modal.addComponents(new ActionRowBuilder().addComponents(questionInput)); // MessageActionRow yerine ActionRowBuilder kullanıldı
 
     await interaction.showModal(modal);
 }
@@ -448,18 +448,18 @@ async function handleGorus(interaction) {
     const konuInput = new TextInputBuilder()
         .setCustomId('konu-input')
         .setLabel('Görüşme konunuz nedir?')
-        .setStyle(TextInputStyle.Short) // Düzeltme
+        .setStyle(TextInputStyle.Short)
         .setRequired(true);
 
     const detayInput = new TextInputBuilder()
         .setCustomId('detay-input')
         .setLabel('Detaylı açıklamanız.')
-        .setStyle(TextInputStyle.Paragraph) // Düzeltme
+        .setStyle(TextInputStyle.Paragraph)
         .setRequired(true);
 
     modal.addComponents(
-        new MessageActionRow().addComponents(konuInput),
-        new MessageActionRow().addComponents(detayInput)
+        new ActionRowBuilder().addComponents(konuInput), // MessageActionRow yerine ActionRowBuilder kullanıldı
+        new ActionRowBuilder().addComponents(detayInput) // MessageActionRow yerine ActionRowBuilder kullanıldı
     );
 
     await interaction.showModal(modal);
