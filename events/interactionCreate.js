@@ -3,7 +3,7 @@
 // Discord.js v14 ile uyumludur.
 
 const {
-    ActionRowBuilder, // MessageActionRow yerine ActionRowBuilder kullanıldı
+    ActionRowBuilder,
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle,
@@ -100,7 +100,7 @@ async function handleBasvuru(interaction) {
         }, {
             id: 'deneyim-input',
             label: 'Bir deneyiminiz var mı? Varsa anlatın.',
-            required: false,
+            required: true,
             style: 'paragraph'
         }, {
             id: 'aktiflik-input',
@@ -121,7 +121,7 @@ async function handleBasvuru(interaction) {
         }, {
             id: 'helper-deneyim-input',
             label: 'Helper deneyiminiz var mı? Varsa anlatın.',
-            required: false,
+            required: true,
             style: 'paragraph'
         }, {
             id: 'aktiflik-input',
@@ -150,7 +150,7 @@ async function handleBasvuru(interaction) {
     );
 
     // Tüm text inputları action row'lara ekle
-    textInputs.forEach(input => modal.addComponents(new ActionRowBuilder().addComponents(input))); // MessageActionRow yerine ActionRowBuilder kullanıldı
+    textInputs.forEach(input => modal.addComponents(new ActionRowBuilder().addComponents(input)));
 
     // Modal'ı kullanıcıya göster
     try {
@@ -167,6 +167,7 @@ async function handleBasvuru(interaction) {
 
 /**
  * Başvuru modalı doldurulup gönderildiğinde işler.
+ * Bu versiyonda kanal oluşturmak yerine doğrudan sonuç kanalına gönderim yapılır.
  * @param {import('discord.js').ModalSubmitInteraction} interaction - Gelen modal etkileşimi.
  */
 async function processBasvuruModal(interaction) {
@@ -241,97 +242,112 @@ async function processBasvuruModal(interaction) {
     const cleanUsername = user.username.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
     const channelName = `${config.namePrefix}${cleanUsername}`;
 
-    // Mevcut başvuru kanalını kontrol et
-    const existingChannel = guild.channels.cache.find(
-        (c) => c.name === channelName && c.parentId === CATEGORY_ID
-    );
+    // Başvuru sonuçlarını içeren embed oluştur
+    const embed = new EmbedBuilder()
+        .setTitle(`${config.applicationType} Başvuru`)
+        .setAuthor({
+            name: user.tag,
+            iconURL: user.displayAvatarURL()
+        })
+        .setDescription(`**Başvuru Yapan:** ${user}`)
+        .addFields(
+            config.modalValues.map(q => ({
+                name: `❓ ${q.label}`,
+                value: interaction.fields.getTextInputValue(q.id) || 'Cevap verilmedi',
+                inline: false,
+            }))
+        )
+        .setColor('#0099ff')
+        .setFooter({
+            text: `${guild.name} | ${config.applicationType} Başvurusu`,
+            iconURL: guild.iconURL()
+        })
+        .setThumbnail(user.displayAvatarURL())
+        .setTimestamp();
 
-    if (existingChannel) {
+    // Sonuç kanalına embed'i gönder
+    const resultChannel = client.channels.cache.get(config.resultChannelId);
+    if (!resultChannel) {
+        console.error(`[KRİTİK HATA] Sonuç kanalı bulunamadı: ${config.resultChannelId}`);
         return interaction.editReply({
-            content: `Zaten aktif bir başvuru kanalınız var: <#${existingChannel.id}>`
+            content: 'Hata: Başvuru sonucu gönderilecek kanal bulunamadı. Lütfen bot sahibine bildirin.'
         });
     }
 
-    let newChannel;
-    try {
-        // Yeni başvuru kanalı oluştur
-        newChannel = await guild.channels.create({
-            name: channelName,
-            type: ChannelType.GuildText,
-            parent: CATEGORY_ID,
-            permissionOverwrites: [{
-                id: guild.roles.everyone.id,
-                deny: [PermissionsBitField.Flags.ViewChannel]
-            }, {
-                id: user.id,
-                allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
-            }, ],
-        });
+    // Özel emojilerin ID'leri
+    const EMOJI_ONAY_ID = '1284130169417764907';
+    const EMOJI_RED_ID = '1284130046902145095';
 
-        // Başvuru sonuçlarını içeren embed oluştur
-        const embed = new EmbedBuilder()
+    const sentMessage = await resultChannel.send({
+        content: `<@&1243478734078742579>`, // Yetkili rolünü etiketle
+        embeds: [embed]
+    });
+
+    // Emojileri tepki olarak ekle
+    await sentMessage.react(EMOJI_ONAY_ID);
+    await sentMessage.react(EMOJI_RED_ID);
+
+    // Başvurunun durumunu takip etmek için özel bir filtre oluştur
+    const filter = (reaction, user) => {
+        return (reaction.emoji.id === EMOJI_ONAY_ID || reaction.emoji.id === EMOJI_RED_ID) &&
+            config.requiredRoles.some(roleId =>
+                interaction.guild.members.cache.get(user.id).roles.cache.has(roleId)
+            );
+    };
+
+    // Mesaj üzerinde reaksiyonları bekle
+    const collector = sentMessage.createReactionCollector({
+        filter,
+        max: 1,
+        time: 3600000
+    }); // 1 saat bekleme süresi
+
+    collector.on('collect', async (reaction, user) => {
+        const isApproved = reaction.emoji.id === EMOJI_ONAY_ID;
+        const statusText = isApproved ? 'ONAYLANDI' : 'REDDEDİLDİ';
+
+        const finalEmbed = new EmbedBuilder()
             .setTitle(`${config.applicationType} Başvuru`)
             .setAuthor({
-                name: user.tag,
-                iconURL: user.displayAvatarURL()
+                name: interaction.user.tag,
+                iconURL: interaction.user.displayAvatarURL()
             })
-            .setDescription(`**Başvuru Yapan:** ${user}`)
-            .addFields(
-                config.modalValues.map(q => ({
-                    name: `❓ ${q.label}`,
-                    value: interaction.fields.getTextInputValue(q.id) || 'Cevap verilmedi',
-                    inline: false,
-                }))
-            )
-            .setColor('#0099ff')
+            .setDescription(`**Başvuru Sonuçlandı!**`)
+            .addFields({
+                name: `Başvuru Durumu`,
+                value: `Başvurunuz, <@${user.id}> tarafından **${statusText}**`
+            })
+            .setColor(isApproved ? '#2ecc71' : '#e74c3c')
             .setFooter({
-                text: `${guild.name} | ${config.applicationType} Başvurusu`,
+                text: `${guild.name}`,
                 iconURL: guild.iconURL()
             })
-            .setThumbnail(user.displayAvatarURL())
             .setTimestamp();
 
-        // Sonuç kanalına embed'i gönder
-        const resultChannel = client.channels.cache.get(config.resultChannelId);
-        if (!resultChannel) {
-            console.error(`[KRİTİK HATA] Sonuç kanalı bulunamadı: ${config.resultChannelId}`);
-            await newChannel.send('Hata: Başvuru sonucu gönderilecek kanal bulunamadı. Lütfen bot sahibine bildirin.');
-            return;
+        // Başvuru sonuç kanalına final mesajını gönder
+        const finalResultChannel = client.channels.cache.get('1277638999464214558');
+        if (finalResultChannel) {
+            await finalResultChannel.send({
+                content: `**Başvuru Sonuçlandı!**`,
+                embeds: [finalEmbed]
+            });
         }
+        
+        // Orijinal başvuru mesajındaki emojileri kaldır
+        await sentMessage.reactions.removeAll().catch(error => console.error('Emojiler kaldırılamadı:', error));
+    });
 
-        // Özel emojilerin ID'leri
-        const EMOJI_ONAY_ID = '1284130169417764907';
-        const EMOJI_RED_ID = '1284130046902145095';
-
-        const sentMessage = await resultChannel.send({
-            content: `<@&1243478734078742579>`, // Yetkili rolünü etiketle
-            embeds: [embed]
-        });
-
-        // Emojileri tepki olarak ekle
-        await sentMessage.react(EMOJI_ONAY_ID);
-        await sentMessage.react(EMOJI_RED_ID);
-
-        // Kullanıcıya kanala gidileceğini bildir
-        await interaction.editReply({
-            content: `Başvurunuz başarıyla alındı ve kanalınız oluşturuldu: ${newChannel}. Lütfen yetkililerin yanıtını bekleyin.`
-        });
-
-        // Kanalı silme mesajı
-        await newChannel.send('Bu başvuru kanalı 10 dakika sonra otomatik olarak silinecektir.');
-
-        // 10 dakika sonra kanalı silme işlemi
-        setTimeout(() => newChannel.delete().catch(() => {}), 600000); // 10 dakika = 600000 ms
-
-    } catch (error) {
-        console.error('[KRİTİK HATA] Başvuru işlenirken genel bir hata oluştu:', error);
-        if (newChannel) {
-            newChannel.delete().catch(err => console.error('[HATA] Hata oluştuğunda kanal silinemedi:', err));
+    collector.on('end', collected => {
+        if (collected.size === 0) {
+            // Süre dolduğunda veya toplanan reaksiyon olmadığında
+            sentMessage.reactions.removeAll().catch(error => console.error('Emojiler kaldırılamadı:', error));
         }
-        await interaction.editReply({
-            content: 'Başvuru kanalınız oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.'
-        });
-    }
+    });
+
+    // Kullanıcıya başvurunun alındığını bildir
+    await interaction.editReply({
+        content: `Başvurunuz başarıyla alındı. Lütfen yetkililerin yanıtını bekleyin.`
+    });
 }
 
 /**
@@ -349,7 +365,7 @@ async function handleSoruTalep(interaction) {
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true);
 
-    modal.addComponents(new ActionRowBuilder().addComponents(questionInput)); // MessageActionRow yerine ActionRowBuilder kullanıldı
+    modal.addComponents(new ActionRowBuilder().addComponents(questionInput));
 
     await interaction.showModal(modal);
 }
@@ -458,8 +474,8 @@ async function handleGorus(interaction) {
         .setRequired(true);
 
     modal.addComponents(
-        new ActionRowBuilder().addComponents(konuInput), // MessageActionRow yerine ActionRowBuilder kullanıldı
-        new ActionRowBuilder().addComponents(detayInput) // MessageActionRow yerine ActionRowBuilder kullanıldı
+        new ActionRowBuilder().addComponents(konuInput),
+        new ActionRowBuilder().addComponents(detayInput)
     );
 
     await interaction.showModal(modal);
