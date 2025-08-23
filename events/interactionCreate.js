@@ -4,8 +4,8 @@
 
 const {
     MessageActionRow,
-    Modal,
-    TextInputComponent,
+    ModalBuilder,
+    TextInputBuilder, // Modal ve TextInputComponent yerine Builder sınıflarını kullanın
     ButtonStyle,
     EmbedBuilder,
     PermissionsBitField,
@@ -75,36 +75,76 @@ module.exports = {
  * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
  */
 async function handleBasvuru(interaction) {
-    const { customId } = interaction;
+    const {
+        customId
+    } = interaction;
     const basvuruTuru = customId.includes('yetkili') ? 'Yetkili' : 'Helper';
     const modalCustomId = customId.replace('Başvuru', '-basvuru-modal');
 
-    const modal = new Modal()
+    const modal = new ModalBuilder()
         .setCustomId(modalCustomId)
         .setTitle(`${basvuruTuru} Başvuru Formu`);
 
     const questions = {
-        yetkiliBaşvuru: [
-            { id: 'isim-yas-input', label: 'İsim ve yaşınız nedir?', required: true, style: 1 },
-            { id: 'neden-basvuru-input', label: 'Neden bu pozisyona başvuruyorsunuz?', required: true, style: 2 },
-            { id: 'deneyim-input', label: 'Bir deneyiminiz var mı? Varsa anlatın.', required: false, style: 2 },
-            { id: 'aktiflik-input', label: 'Sunucuda ne kadar aktif olabilirsiniz?', required: true, style: 1 },
-            { id: 'neden-secilmeli-input', label: 'Neden sizi seçmeliyiz?', required: true, style: 2 }
-        ],
-        helperBaşvuru: [
-            { id: 'isim-yas-input', label: 'İsim ve yaşınız nedir?', required: true, style: 1 },
-            { id: 'helper-deneyim-input', label: 'Helper deneyiminiz var mı? Varsa anlatın.', required: false, style: 2 },
-            { id: 'aktiflik-input', label: 'Sunucuda ne kadar aktif olabilirsiniz?', required: true, style: 1 },
-            { id: 'owo-bilgi-input', label: 'OwO bot bilginiz nasıl?', required: true, style: 1 },
-            { id: 'takim-meta-input', label: 'Takım metası bilginiz nedir?', required: true, style: 2 }
-        ]
+        yetkiliBaşvuru: [{
+            id: 'isim-yas-input',
+            label: 'İsim ve yaşınız nedir?',
+            required: true,
+            style: ButtonStyle.Short
+        }, {
+            id: 'neden-basvuru-input',
+            label: 'Neden bu pozisyona başvuruyorsunuz?',
+            required: true,
+            style: ButtonStyle.Paragraph
+        }, {
+            id: 'deneyim-input',
+            label: 'Bir deneyiminiz var mı? Varsa anlatın.',
+            required: false,
+            style: ButtonStyle.Paragraph
+        }, {
+            id: 'aktiflik-input',
+            label: 'Sunucuda ne kadar aktif olabilirsiniz?',
+            required: true,
+            style: ButtonStyle.Short
+        }, {
+            id: 'neden-secilmeli-input',
+            label: 'Neden sizi seçmeliyiz?',
+            required: true,
+            style: ButtonStyle.Paragraph
+        }],
+        helperBaşvuru: [{
+            id: 'isim-yas-input',
+            label: 'İsim ve yaşınız nedir?',
+            required: true,
+            style: ButtonStyle.Short
+        }, {
+            id: 'helper-deneyim-input',
+            label: 'Helper deneyiminiz var mı? Varsa anlatın.',
+            required: false,
+            style: ButtonStyle.Paragraph
+        }, {
+            id: 'aktiflik-input',
+            label: 'Sunucuda ne kadar aktif olabilirsiniz?',
+            required: true,
+            style: ButtonStyle.Short
+        }, {
+            id: 'owo-bilgi-input',
+            label: 'OwO bot bilginiz nasıl?',
+            required: true,
+            style: ButtonStyle.Short
+        }, {
+            id: 'takim-meta-input',
+            label: 'Takım metası bilginiz nedir?',
+            required: true,
+            style: ButtonStyle.Paragraph
+        }]
     };
 
     const textInputs = questions[customId].map(q =>
-        new TextInputComponent()
+        new TextInputBuilder()
         .setCustomId(q.id)
         .setLabel(q.label)
-        .setStyle(q.style) // 1 = SHORT, 2 = PARAGRAPH
+        .setStyle(q.style) // ButtonStyle.Short, ButtonStyle.Paragraph
         .setRequired(q.required)
     );
 
@@ -129,7 +169,9 @@ async function handleBasvuru(interaction) {
  * @param {import('discord.js').ModalSubmitInteraction} interaction - Gelen modal etkileşimi.
  */
 async function processBasvuruModal(interaction) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({
+        ephemeral: true
+    });
     const {
         user,
         customId,
@@ -273,7 +315,7 @@ async function processBasvuruModal(interaction) {
         await interaction.editReply({
             content: `Başvurunuz başarıyla alındı ve kanalınız oluşturuldu: ${newChannel}. Lütfen yetkililerin yanıtını bekleyin.`
         });
-        
+
         // Kanalı silme mesajı
         await newChannel.send('Bu başvuru kanalı 10 dakika sonra otomatik olarak silinecektir.');
 
@@ -286,7 +328,7 @@ async function processBasvuruModal(interaction) {
             newChannel.delete().catch(err => console.error('[HATA] Hata oluştuğunda kanal silinemedi:', err));
         }
         await interaction.editReply({
-            content: 'Başvuru kanalınız oluşturulurken bir hata oluştu. Lütfen daha sonra tekrar deneyin.'
+            content: 'Başvuru kanalınız oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.'
         });
     }
 }
@@ -296,14 +338,14 @@ async function processBasvuruModal(interaction) {
  * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
  */
 async function handleSoruTalep(interaction) {
-    const modal = new Modal()
+    const modal = new ModalBuilder() // Modal yerine ModalBuilder kullanın
         .setCustomId('soru-talep-modal')
         .setTitle('Soru Talep Formu');
 
-    const questionInput = new TextInputComponent()
+    const questionInput = new TextInputBuilder() // TextInputComponent yerine TextInputBuilder kullanın
         .setCustomId('soru-input')
         .setLabel('Sorunuzu buraya yazın')
-        .setStyle(TextInputComponent.Styles.PARAGRAPH)
+        .setStyle(ButtonStyle.Paragraph)
         .setRequired(true);
 
     modal.addComponents(new MessageActionRow().addComponents(questionInput));
@@ -316,7 +358,9 @@ async function handleSoruTalep(interaction) {
  * @param {import('discord.js').ModalSubmitInteraction} interaction - Gelen modal etkileşimi.
  */
 async function processSoruTalepModal(interaction) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({
+        ephemeral: true
+    });
     const {
         user,
         guild
@@ -372,7 +416,7 @@ async function processSoruTalepModal(interaction) {
         await interaction.editReply({
             content: `Soru talep kanalınız oluşturuldu: ${newChannel}. Bir yetkili en kısa sürede size yardımcı olacaktır.`
         });
-        
+
         // Kanalı 5 dakika sonra kapatma
         setTimeout(() => {
             newChannel.delete().catch(err => {
@@ -396,20 +440,20 @@ async function processSoruTalepModal(interaction) {
  * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
  */
 async function handleGorus(interaction) {
-    const modal = new Modal()
+    const modal = new ModalBuilder() // Modal yerine ModalBuilder kullanın
         .setCustomId('gorus-modal')
         .setTitle('Üst Yetkiliyle Görüşme Talebi');
 
-    const konuInput = new TextInputComponent()
+    const konuInput = new TextInputBuilder() // TextInputComponent yerine TextInputBuilder kullanın
         .setCustomId('konu-input')
         .setLabel('Görüşme konunuz nedir?')
-        .setStyle(TextInputComponent.Styles.SHORT)
+        .setStyle(ButtonStyle.Short)
         .setRequired(true);
 
-    const detayInput = new TextInputComponent()
+    const detayInput = new TextInputBuilder() // TextInputComponent yerine TextInputBuilder kullanın
         .setCustomId('detay-input')
         .setLabel('Detaylı açıklamanız.')
-        .setStyle(TextInputComponent.Styles.PARAGRAPH)
+        .setStyle(ButtonStyle.Paragraph)
         .setRequired(true);
 
     modal.addComponents(
@@ -425,8 +469,13 @@ async function handleGorus(interaction) {
  * @param {import('discord.js').ModalSubmitInteraction} interaction - Gelen modal etkileşimi.
  */
 async function processGorusModal(interaction) {
-    await interaction.deferReply({ ephemeral: true });
-    const { user, guild } = interaction;
+    await interaction.deferReply({
+        ephemeral: true
+    });
+    const {
+        user,
+        guild
+    } = interaction;
     const konu = interaction.fields.getTextInputValue('konu-input');
     const detay = interaction.fields.getTextInputValue('detay-input');
 
@@ -482,7 +531,7 @@ async function processGorusModal(interaction) {
         await interaction.editReply({
             content: `Üst yetkiliyle görüşme kanalınız oluşturuldu: ${newChannel}. Lütfen yetkililerin yanıtını bekleyin.`
         });
-        
+
         // Kanalı 30 dakika sonra kapatma
         setTimeout(() => {
             newChannel.delete().catch(err => {
