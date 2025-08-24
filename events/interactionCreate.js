@@ -26,13 +26,20 @@ module.exports = {
 
         // --- BUTON ETKİLEŞİMLERİ İŞLEME KISMI ---
         if (interaction.isButton()) {
+            // Dinamik ID'ye sahip olan onay/reddet butonları için kontrol
+            if (interaction.customId.startsWith('onayla-basvuru') || interaction.customId.startsWith('reddet-basvuru')) {
+                await handleResultButtons(interaction);
+                return;
+            }
+
+            // Statik ID'ye sahip diğer butonlar için switch
             switch (interaction.customId) {
                 // Başvuru butonları tıklandığında (ilk adım)
                 case 'yetkiliBaşvuru':
                 case 'helperBaşvuru':
                     await handleBasvuruFirstStep(interaction);
                     break;
-                // Yeni eklenen form açma butonları tıklandığında (ikinci adım)
+                // Form açma butonları tıklandığında (ikinci adım)
                 case 'open-yetkili-modal':
                 case 'open-helper-modal':
                     await handleBasvuruSecondStep(interaction);
@@ -42,10 +49,6 @@ module.exports = {
                     break;
                 case 'close-gorusme-channel':
                     await handleCloseChannelButton(interaction);
-                    break;
-                case 'onayla-basvuru':
-                case 'reddet-basvuru':
-                    await handleResultButtons(interaction);
                     break;
                 default:
                     // Tanımsız butonları görmezden gel ve konsola yazdır.
@@ -343,7 +346,7 @@ async function handleResultButtons(interaction) {
     }
 
     // Buton ID'sinden başvuran kullanıcının ID'sini çek
-    const applicantId = customId.split('-')[2];
+    const applicantId = customId.split('-').pop(); // .split('-')[2] yerine .pop() daha güvenilir
     const isApproved = customId.startsWith('onayla');
     const statusText = isApproved ? 'ONAYLANDI' : 'REDDEDİLDİ';
 
