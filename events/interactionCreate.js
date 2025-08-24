@@ -27,9 +27,15 @@ module.exports = {
         // --- BUTON ETKİLEŞİMLERİ İŞLEME KISMI ---
         if (interaction.isButton()) {
             switch (interaction.customId) {
+                // Başvuru butonları tıklandığında (ilk adım)
                 case 'yetkiliBaşvuru':
                 case 'helperBaşvuru':
-                    await handleBasvuruButton(interaction);
+                    await handleBasvuruFirstStep(interaction);
+                    break;
+                // Yeni eklenen form açma butonları tıklandığında (ikinci adım)
+                case 'open-yetkili-modal':
+                case 'open-helper-modal':
+                    await handleBasvuruSecondStep(interaction);
                     break;
                 case 'görüş':
                     await handleGorusmeButton(interaction);
@@ -37,7 +43,6 @@ module.exports = {
                 case 'close-gorusme-channel':
                     await handleCloseChannelButton(interaction);
                     break;
-                // Yeni eklenen butonları işlemek için
                 case 'onayla-basvuru':
                 case 'reddet-basvuru':
                     await handleResultButtons(interaction);
@@ -68,10 +73,36 @@ module.exports = {
 };
 
 /**
- * Başvuru butonları tıklandığında ilgili modalı (formu) gösterir.
+ * Başvuru butonları tıklandığında (ilk aşama), üyeye form açma butonu gösterir.
  * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
  */
-async function handleBasvuruButton(interaction) {
+async function handleBasvuruFirstStep(interaction) {
+    await interaction.deferReply({
+        ephemeral: true
+    });
+
+    const basvuruTuru = interaction.customId.includes('yetkili') ? 'Yetkili' : 'Helper';
+    const buttonCustomId = interaction.customId.includes('yetkili') ? 'open-yetkili-modal' : 'open-helper-modal';
+
+    const actionRow = new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+            .setCustomId(buttonCustomId)
+            .setLabel(`Formu Doldur: ${basvuruTuru}`)
+            .setStyle(ButtonStyle.Primary)
+        );
+
+    await interaction.editReply({
+        content: 'Lütfen başvurunuza devam etmek için aşağıdaki butona tıklayın.',
+        components: [actionRow]
+    });
+}
+
+/**
+ * Üyenin gönderdiği formu açma butonunu işler (ikinci aşama) ve modalı gösterir.
+ * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
+ */
+async function handleBasvuruSecondStep(interaction) {
     const {
         customId
     } = interaction;
@@ -83,7 +114,7 @@ async function handleBasvuruButton(interaction) {
         .setTitle(`${basvuruTuru} Başvuru Formu`);
 
     const questions = {
-        'yetkiliBaşvuru': [{
+        'open-yetkili-modal': [{
             id: 'isim-yas',
             label: 'İsim ve yaşınız nedir?',
             required: true,
@@ -109,7 +140,7 @@ async function handleBasvuruButton(interaction) {
             required: true,
             style: TextInputStyle.Paragraph
         }],
-        'helperBaşvuru': [{
+        'open-helper-modal': [{
             id: 'isim-yas',
             label: 'İsim ve yaşınız nedir?',
             required: true,
@@ -150,16 +181,16 @@ async function handleBasvuruButton(interaction) {
         await interaction.showModal(modal);
     } catch (e) {
         console.error('[HATA] Başvuru modalı gösterilirken hata:', e);
-        await interaction.reply({
+        // Hata durumunda, kullanıcının gördüğü mesajı güncelleyelim.
+        await interaction.editReply({
             content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.',
-            ephemeral: true
+            components: []
         });
     }
 }
 
 /**
- * Başvuru modalı gönderildiğinde işler. Embed oluşturup başvuruyu yetkili kanalına gönderir
- * ve reaksiyon kolektörü başlatır.
+ * Başvuru modalı gönderildiğinde işler.
  * @param {import('discord.js').ModalSubmitInteraction} interaction - Gelen modal etkileşimi.
  */
 async function processBasvuruModal(interaction) {
@@ -256,11 +287,11 @@ async function processBasvuruModal(interaction) {
     const actionRow = new ActionRowBuilder()
         .addComponents(
             new ButtonBuilder()
-            .setCustomId(`onayla-basvuru-${user.id}`) // Kullanıcı ID'sini özel ID'ye ekle
+            .setCustomId(`onayla-basvuru-${user.id}`)
             .setLabel('Onayla')
             .setStyle(ButtonStyle.Success),
             new ButtonBuilder()
-            .setCustomId(`reddet-basvuru-${user.id}`) // Kullanıcı ID'sini özel ID'ye ekle
+            .setCustomId(`reddet-basvuru-${user.id}`)
             .setLabel('Reddet')
             .setStyle(ButtonStyle.Danger),
         );
@@ -277,7 +308,6 @@ async function processBasvuruModal(interaction) {
             content: 'Hata: Başvuru mesajı yetkili kanalına gönderilemedi.'
         });
     }
-
 
     await interaction.editReply({
         content: `Başvurunuz başarıyla alındı. Yetkililer en kısa sürede değerlendirecektir.`
