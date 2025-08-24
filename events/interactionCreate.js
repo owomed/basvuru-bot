@@ -27,18 +27,20 @@ module.exports = {
         // --- BUTON ETKİLEŞİMLERİ İŞLEME KISMI ---
         if (interaction.isButton()) {
             switch (interaction.customId) {
-                // LÜTFEN AŞAĞIDAKİ CUSTOM ID'LERİ KENDİ BUTON ID'LERİNLE DEĞİŞTİR!
-                case 'yetkiliBaşvuru': // KONSOLDA GÖRÜNEN BUTON ID'SİNE GÖRE GÜNCELLENDİ
-                case 'helperBaşvuru': // KONSOLDA GÖRÜNEN BUTON ID'SİNE GÖRE GÜNCELLENDİ
+                case 'yetkiliBaşvuru':
+                case 'helperBaşvuru':
                     await handleBasvuruButton(interaction);
                     break;
-                // LÜTFEN AŞAĞIDAKİ CUSTOM ID'Yİ KENDİ BUTON ID'NLE DEĞİŞTİR!
-                case 'görüş': // KONSOLDA GÖRÜNEN BUTON ID'SİNE GÖRE GÜNCELLENDİ
+                case 'görüş':
                     await handleGorusmeButton(interaction);
                     break;
-                // Kanal kapatma butonu
                 case 'close-gorusme-channel':
                     await handleCloseChannelButton(interaction);
+                    break;
+                // Yeni eklenen butonları işlemek için
+                case 'onayla-basvuru':
+                case 'reddet-basvuru':
+                    await handleResultButtons(interaction);
                     break;
                 default:
                     // Tanımsız butonları görmezden gel ve konsola yazdır.
@@ -50,12 +52,10 @@ module.exports = {
         // --- MODAL ETKİLEŞİMLERİ İŞLEME KISMI ---
         if (interaction.isModalSubmit()) {
             switch (interaction.customId) {
-                // Başvuru modalı
                 case 'yetkili-basvuru-modal':
                 case 'helper-basvuru-modal':
                     await processBasvuruModal(interaction);
                     break;
-                // Görüşme modalı
                 case 'gorusme-modal':
                     await processGorusmeModal(interaction);
                     break;
@@ -241,6 +241,8 @@ async function processBasvuruModal(interaction) {
         })
         .setThumbnail(user.displayAvatarURL())
         .setTimestamp();
+        
+    const yetkiliRoleId = '1243478734078742579';
 
     const resultChannel = client.channels.cache.get(basvuruConfig.channelId);
     if (!resultChannel) {
@@ -250,95 +252,155 @@ async function processBasvuruModal(interaction) {
         });
     }
 
-    // Yetkili rolünü etiketle
-    const yetkiliRoleId = '1243478734078742579';
+    // Onay ve Ret butonları oluşturuluyor
+    const actionRow = new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+            .setCustomId(`onayla-basvuru-${user.id}`) // Kullanıcı ID'sini özel ID'ye ekle
+            .setLabel('Onayla')
+            .setStyle(ButtonStyle.Success),
+            new ButtonBuilder()
+            .setCustomId(`reddet-basvuru-${user.id}`) // Kullanıcı ID'sini özel ID'ye ekle
+            .setLabel('Reddet')
+            .setStyle(ButtonStyle.Danger),
+        );
 
-    const sentMessage = await resultChannel.send({
-        content: `<@&${yetkiliRoleId}> Yeni bir ${basvuruConfig.type} başvurusu var.`,
-        embeds: [basvuruEmbed]
-    });
+    try {
+        await resultChannel.send({
+            content: `<@&${yetkiliRoleId}> Yeni bir ${basvuruConfig.type} başvurusu var.`,
+            embeds: [basvuruEmbed],
+            components: [actionRow]
+        });
+    } catch (e) {
+        console.error('[HATA] Başvuru mesajı gönderilirken hata:', e);
+        return interaction.editReply({
+            content: 'Hata: Başvuru mesajı yetkili kanalına gönderilemedi.'
+        });
+    }
 
-    const EMOJI_ONAY_ID = '1284130169417764907';
-    const EMOJI_RED_ID = '1284130046902145095';
-
-    await sentMessage.react(EMOJI_ONAY_ID);
-    await sentMessage.react(EMOJI_RED_ID);
-
-    // Reaksiyon toplayıcı
-    const collector = sentMessage.createReactionCollector({
-        filter: (reaction, reactor) => {
-            const member = interaction.guild.members.cache.get(reactor.id);
-            const isAuthorized = member && basvuruConfig.requiredRoles.some(roleId => member.roles.cache.has(roleId));
-            return (reaction.emoji.id === EMOJI_ONAY_ID || reaction.emoji.id === EMOJI_RED_ID) && isAuthorized;
-        },
-        max: 1,
-        time: 3600000 // 1 saat
-    });
-
-    collector.on('collect', async (reaction, reactor) => {
-        const isApproved = reaction.emoji.id === EMOJI_ONAY_ID;
-        const statusText = isApproved ? 'ONAYLANDI' : 'REDDEDİLDİ';
-
-        const finalEmbed = new EmbedBuilder()
-            .setTitle(`MED Başvuru`)
-            .setAuthor({
-                name: user.tag,
-                iconURL: user.displayAvatarURL()
-            })
-            .setDescription(`**Başvurunuz sonuçlandı!**`)
-            .addFields({
-                name: `Başvuru Durumu`,
-                value: `${basvuruConfig.type} başvurunuz, <@${reactor.id}> kişisi tarafından **${statusText}**`,
-                inline: false
-            })
-            .setColor(isApproved ? '#2ecc71' : '#e74c3c')
-            .setFooter({
-                text: `${guild.name} | ${basvuruConfig.type} Başvurusu`,
-                iconURL: guild.iconURL()
-            })
-            .setTimestamp();
-
-        let finalResultChannel = client.channels.cache.get('1277638999464214558');
-
-        // Kanaldaki botun izinlerini kontrol etmek için eklenen kısım
-        if (!finalResultChannel) {
-            console.error('[HATA] Başvuru sonuç kanalı önbellekte bulunamadı. Discord\'dan çekiliyor...');
-            try {
-                finalResultChannel = await client.channels.fetch('1277638999464214558');
-            } catch (error) {
-                console.error('[KRİTİK HATA] Başvuru sonuç kanalı Discord\'dan çekilirken hata:', error);
-                return;
-            }
-        }
-
-        if (finalResultChannel) {
-            try {
-                // Hata kontrolü için try-catch bloğu eklendi
-                await finalResultChannel.send({
-                    embeds: [finalEmbed]
-                });
-            } catch (error) {
-                console.error('[KRİTİK HATA] Başvuru sonuç mesajı gönderilirken bir hata oluştu:', error);
-                // Burada kullanıcıya da bir uyarı gönderilebilir, ancak şu an için konsol yeterli.
-            }
-        } else {
-            console.error('[KRİTİK HATA] Başvuru sonuç kanalı hala bulunamıyor. Lütfen kanal ID\'sini kontrol edin ve botun kanal üzerinde mesaj gönderme izni olduğundan emin olun.');
-        }
-
-        // Reaksiyonları kaldır
-        await sentMessage.reactions.removeAll().catch(error => console.error('Emojiler kaldırılamadı:', error));
-    });
-
-    collector.on('end', collected => {
-        if (collected.size === 0) {
-            sentMessage.reactions.removeAll().catch(error => console.error('Emojiler kaldırılamadı:', error));
-        }
-    });
 
     await interaction.editReply({
         content: `Başvurunuz başarıyla alındı. Yetkililer en kısa sürede değerlendirecektir.`
     });
 }
+
+/**
+ * Onay ve Reddet butonlarını işler.
+ * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
+ */
+async function handleResultButtons(interaction) {
+    await interaction.deferReply({
+        ephemeral: true
+    });
+    
+    const {
+        customId,
+        user,
+        guild,
+        client
+    } = interaction;
+
+    // Yetki kontrolü (sadece yetkili rollerine sahip olanlar butona basabilir)
+    const requiredRoles = ['1243478734078742579', '1216094391060529393', '1188389290292551740'];
+    const member = guild.members.cache.get(user.id);
+    const hasPermission = member && requiredRoles.some(roleId => member.roles.cache.has(roleId));
+
+    if (!hasPermission) {
+        return interaction.editReply({
+            content: 'Bu butonu kullanma yetkiniz yok.',
+            ephemeral: true
+        });
+    }
+
+    // Buton ID'sinden başvuran kullanıcının ID'sini çek
+    const applicantId = customId.split('-')[2];
+    const isApproved = customId.startsWith('onayla');
+    const statusText = isApproved ? 'ONAYLANDI' : 'REDDEDİLDİ';
+
+    const finalEmbed = new EmbedBuilder()
+        .setTitle(`MED Başvuru`)
+        .setAuthor({
+            name: user.tag,
+            iconURL: user.displayAvatarURL()
+        })
+        .setDescription(`**Başvurunuz sonuçlandı!**`)
+        .addFields({
+            name: `Başvuru Durumu`,
+            value: `Başvurunuz, <@${interaction.user.id}> kişisi tarafından **${statusText}**`,
+            inline: false
+        })
+        .setColor(isApproved ? '#2ecc71' : '#e74c3c')
+        .setFooter({
+            text: `${guild.name}`,
+            iconURL: guild.iconURL()
+        })
+        .setTimestamp();
+
+    // Mesajın orijinal sahibini bul (başvuran kişi) ve ona özel mesaj gönder
+    const applicantUser = await client.users.fetch(applicantId).catch(() => null);
+    if (applicantUser) {
+        try {
+            await applicantUser.send({
+                embeds: [finalEmbed]
+            });
+        } catch (e) {
+            console.error('[HATA] Başvuran kişiye özel mesaj gönderilemedi:', e);
+        }
+    }
+
+    // Başvuru sonuç kanalına mesaj gönder (her iki yöntem de denenecek)
+    let finalResultChannel = client.channels.cache.get('1277638999464214558');
+    
+    if (!finalResultChannel) {
+        console.log('[HATA AYIKLAMA] Sonuç kanalı önbellekte bulunamadı. Discord\'dan çekiliyor...');
+        try {
+            finalResultChannel = await client.channels.fetch('1277638999464214558');
+        } catch (error) {
+            console.error('[KRİTİK HATA] Başvuru sonuç kanalı Discord\'dan çekilirken hata:', error);
+            return interaction.editReply({ content: 'Sonuç kanalı bulunamadı. Lütfen bot sahibine bildirin.' });
+        }
+    }
+    
+    if (finalResultChannel) {
+        try {
+            await finalResultChannel.send({ embeds: [finalEmbed] });
+        } catch (error) {
+            console.error('[KRİTİK HATA] Başvuru sonuç mesajı gönderilirken bir hata oluştu:', error);
+            return interaction.editReply({ content: 'Sonuç mesajı gönderilemedi. Lütfen botun kanal yetkilerini kontrol edin.' });
+        }
+    } else {
+        console.error('[KRİTİK HATA] Sonuç kanalı hala bulunamıyor. Lütfen kanal ID\'sini ve bot yetkilerini kontrol edin.');
+        return interaction.editReply({ content: 'Sonuç kanalı bulunamadı. Lütfen bot sahibine bildirin.' });
+    }
+
+    // Başvuru mesajının butonlarını devre dışı bırak
+    const originalMessage = interaction.message;
+    if (originalMessage) {
+        const disabledActionRow = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                .setCustomId('onaylandi')
+                .setLabel('Onaylandı')
+                .setStyle(ButtonStyle.Success)
+                .setDisabled(true),
+                new ButtonBuilder()
+                .setCustomId('reddedildi')
+                .setLabel('Reddedildi')
+                .setStyle(ButtonStyle.Danger)
+                .setDisabled(true),
+            );
+        
+        // Orijinal mesajı düzenle ve butonları kaldır
+        await originalMessage.edit({
+            components: [disabledActionRow]
+        }).catch(e => console.error('[HATA] Orijinal mesaj güncellenemedi:', e));
+    }
+    
+    await interaction.editReply({
+        content: `Başvuru başarıyla **${statusText}** olarak işaretlendi. Sonuç kanala gönderildi.`
+    });
+}
+
 
 /**
  * Üst yetkiliyle görüşme butonu tıklandığında modalı gösterir.
