@@ -300,9 +300,14 @@ async function processBasvuruModal(interaction) {
 
         const finalResultChannel = client.channels.cache.get('1277638999464214558');
         if (finalResultChannel) {
-            await finalResultChannel.send({
-                embeds: [finalEmbed]
-            });
+            try {
+                // Hata kontrolü için try-catch bloğu eklendi
+                await finalResultChannel.send({
+                    embeds: [finalEmbed]
+                });
+            } catch (error) {
+                console.error('[KRİTİK HATA] Başvuru sonuç mesajı gönderilirken bir hata oluştu:', error);
+            }
         }
 
         // Reaksiyonları kaldır
