@@ -298,7 +298,19 @@ async function processBasvuruModal(interaction) {
             })
             .setTimestamp();
 
-        const finalResultChannel = client.channels.cache.get('1277638999464214558');
+        let finalResultChannel = client.channels.cache.get('1277638999464214558');
+
+        // Kanaldaki botun izinlerini kontrol etmek için eklenen kısım
+        if (!finalResultChannel) {
+            console.error('[HATA] Başvuru sonuç kanalı önbellekte bulunamadı. Discord\'dan çekiliyor...');
+            try {
+                finalResultChannel = await client.channels.fetch('1277638999464214558');
+            } catch (error) {
+                console.error('[KRİTİK HATA] Başvuru sonuç kanalı Discord\'dan çekilirken hata:', error);
+                return;
+            }
+        }
+
         if (finalResultChannel) {
             try {
                 // Hata kontrolü için try-catch bloğu eklendi
@@ -307,7 +319,10 @@ async function processBasvuruModal(interaction) {
                 });
             } catch (error) {
                 console.error('[KRİTİK HATA] Başvuru sonuç mesajı gönderilirken bir hata oluştu:', error);
+                // Burada kullanıcıya da bir uyarı gönderilebilir, ancak şu an için konsol yeterli.
             }
+        } else {
+            console.error('[KRİTİK HATA] Başvuru sonuç kanalı hala bulunamıyor. Lütfen kanal ID\'sini kontrol edin ve botun kanal üzerinde mesaj gönderme izni olduğundan emin olun.');
         }
 
         // Reaksiyonları kaldır
