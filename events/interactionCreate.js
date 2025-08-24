@@ -1,26 +1,25 @@
-// Bu dosya `./events/` klasörüne taşınmalıdır.
-// Bu dosya hem başvuru, hem soru talep, hem de şikayet (ticket) butonlarını işler.
-// Discord.js v14 ile uyumludur.
+// Bu dosya, Discord.js v14 kullanarak çeşitli interaksiyonları yönetir:
+// Buton tıklamaları, modal gönderimleri ve reaksiyon kolektörleri.
 
 const {
     ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle,
-    ButtonStyle,
     EmbedBuilder,
     PermissionsBitField,
     ChannelType,
     Events,
 } = require('discord.js');
 
+// Discord.js'in "interactionCreate" olayını dinleyecek modül.
 module.exports = {
-    // Bu dosyanın dinleyeceği olay 'interactionCreate'
     name: Events.InteractionCreate,
-    // Etkileşim olduğunda çalışacak asenkron fonksiyon
     async execute(interaction) {
 
-        // Sadece buton ve modal etkileşimlerini dinle, diğerlerini yok say.
+        // Sadece buton ve modal etkileşimlerini işleme al, diğerlerini yok say.
         if (!interaction.isButton() && !interaction.isModalSubmit()) {
             return;
         }
@@ -28,18 +27,18 @@ module.exports = {
         // --- BUTON ETKİLEŞİMLERİ İŞLEME KISMI ---
         if (interaction.isButton()) {
             switch (interaction.customId) {
-                case 'yetkiliBaşvuru':
-                case 'helperBaşvuru':
-                    // Başvuru butonlarını işleyen kısım
-                    await handleBasvuru(interaction);
+                // Yetkili ve Helper başvuru butonları
+                case 'yetkili-basvuru':
+                case 'helper-basvuru':
+                    await handleBasvuruButton(interaction);
                     break;
-                case 'soruTalep':
-                    // Soru talep butonunu işleyen kısım
-                    await handleSoruTalep(interaction);
+                // Üst yetkiliyle görüşme talep butonu
+                case 'ust-yetkili-gorusme':
+                    await handleGorusmeButton(interaction);
                     break;
-                case 'görüş':
-                    // Üst yetkiliyle görüşme butonu
-                    await handleGorus(interaction);
+                // Kanal kapatma butonu
+                case 'close-gorusme-channel':
+                    await handleCloseChannelButton(interaction);
                     break;
                 default:
                     // Tanımsız butonları görmezden gel
@@ -50,18 +49,14 @@ module.exports = {
         // --- MODAL ETKİLEŞİMLERİ İŞLEME KISMI ---
         if (interaction.isModalSubmit()) {
             switch (interaction.customId) {
+                // Başvuru modalı
                 case 'yetkili-basvuru-modal':
                 case 'helper-basvuru-modal':
-                    // Başvuru modalını işleyen kısım
                     await processBasvuruModal(interaction);
                     break;
-                case 'soru-talep-modal':
-                    // Soru talep modalını işleyen kısım
-                    await processSoruTalepModal(interaction);
-                    break;
-                case 'gorus-modal':
-                    // Görüşme modalını işleyen kısım
-                    await processGorusModal(interaction);
+                // Görüşme modalı
+                case 'gorusme-modal':
+                    await processGorusmeModal(interaction);
                     break;
                 default:
                     // Tanımsız modalları görmezden gel
@@ -72,336 +67,88 @@ module.exports = {
 };
 
 /**
- * Başvuru butonları tıklandığında modalı (formu) gösterir.
+ * Başvuru butonları tıklandığında ilgili modalı (formu) gösterir.
  * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
  */
-async function handleBasvuru(interaction) {
+async function handleBasvuruButton(interaction) {
     const {
         customId
     } = interaction;
-
-    // Debug için butondan gelen customId'yi logla
-    console.log(`[DEBUG] handleBasvuru - Gelen butondaki customId: ${customId}`);
-
-    if (!customId) {
-        console.error('[HATA] Buton customId\'si bulunamadı. Lütfen buton oluşturma kodunu kontrol edin.');
-        return;
-    }
-
     const basvuruTuru = customId.includes('yetkili') ? 'Yetkili' : 'Helper';
-    const modalCustomId = customId.replace('Başvuru', '-basvuru-modal');
+    const modalCustomId = customId.includes('yetkili') ? 'yetkili-basvuru-modal' : 'helper-basvuru-modal';
 
     const modal = new ModalBuilder()
         .setCustomId(modalCustomId)
         .setTitle(`${basvuruTuru} Başvuru Formu`);
 
     const questions = {
-        yetkiliBaşvuru: [{
-            id: 'isim-yas-input',
+        'yetkili-basvuru': [{
+            id: 'isim-yas',
             label: 'İsim ve yaşınız nedir?',
             required: true,
-            style: 'short'
+            style: TextInputStyle.Short
         }, {
-            id: 'neden-basvuru-input',
+            id: 'neden-basvuru',
             label: 'Neden bu pozisyona başvuruyorsunuz?',
             required: true,
-            style: 'paragraph'
+            style: TextInputStyle.Paragraph
         }, {
-            id: 'deneyim-input',
+            id: 'deneyim',
             label: 'Bir deneyiminiz var mı? Varsa anlatın.',
             required: false,
-            style: 'paragraph'
+            style: TextInputStyle.Paragraph
         }, {
-            id: 'aktiflik-input',
+            id: 'aktiflik',
             label: 'Sunucuda ne kadar aktif olabilirsiniz?',
             required: true,
-            style: 'short'
+            style: TextInputStyle.Short
         }, {
-            id: 'neden-secilmeli-input',
+            id: 'neden-secilmeli',
             label: 'Neden sizi seçmeliyiz?',
             required: true,
-            style: 'paragraph'
+            style: TextInputStyle.Paragraph
         }],
-        helperBaşvuru: [{
-            id: 'isim-yas-input',
+        'helper-basvuru': [{
+            id: 'isim-yas',
             label: 'İsim ve yaşınız nedir?',
             required: true,
-            style: 'short'
+            style: TextInputStyle.Short
         }, {
-            id: 'helper-deneyim-input',
+            id: 'helper-deneyim',
             label: 'Helper deneyiminiz var mı? Varsa anlatın.',
             required: false,
-            style: 'paragraph'
+            style: TextInputStyle.Paragraph
         }, {
-            id: 'aktiflik-input',
+            id: 'aktiflik',
             label: 'Sunucuda ne kadar aktif olabilirsiniz?',
             required: true,
-            style: 'short'
+            style: TextInputStyle.Short
         }, {
-            id: 'owo-bilgi-input',
+            id: 'owo-bilgi',
             label: 'OwO bot bilginiz nasıl?',
             required: true,
-            style: 'short'
+            style: TextInputStyle.Short
         }, {
-            id: 'takim-meta-input',
+            id: 'takim-meta',
             label: 'Takım metası bilginiz nedir?',
             required: true,
-            style: 'paragraph'
+            style: TextInputStyle.Paragraph
         }]
     };
 
-    const textInputs = questions[customId].map(q =>
-        new TextInputBuilder()
-        .setCustomId(q.id)
-        .setLabel(q.label)
-        .setStyle(q.style === 'short' ? TextInputStyle.Short : TextInputStyle.Paragraph)
-        .setRequired(q.required)
-    );
-
-    // Tüm text inputları action row'lara ekle
-    textInputs.forEach(input => modal.addComponents(new ActionRowBuilder().addComponents(input)));
-
-    // Modal'ı kullanıcıya göster. Bu, buton tıklamasına doğrudan bir yanıttır ve önceden herhangi bir deferReply veya deferUpdate yapılmamalıdır.
-    try {
-        await interaction.showModal(modal);
-        console.log(`[DEBUG] Başvuru modalı kullanıcıya gösterildi: ${modal.customId}`);
-    } catch (e) {
-        console.error('[HATA] Başvuru modalı gösterilirken hata oluştu:', e);
-        // Bu hata genellikle 3 saniyelik zaman aşımı nedeniyle oluşur.
-        // Hata durumunda kullanıcıya bilgilendirici bir mesaj gönderilir.
-        try {
-            // "ephemeral" bayrağı kullanmak yerine "flags" ile belirttik.
-            await interaction.reply({
-                content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.',
-                ephemeral: true
-            });
-        } catch (replyError) {
-            console.error('[HATA] Hata mesajı gönderilemedi:', replyError);
-        }
-    }
-}
-
-/**
- * Başvuru modalı doldurulup gönderildiğinde işler.
- * Bu versiyonda kanal oluşturmak yerine doğrudan sonuç kanalına gönderim yapılır.
- * @param {import('discord.js').ModalSubmitInteraction} interaction - Gelen modal etkileşimi.
- */
-async function processBasvuruModal(interaction) {
-    await interaction.deferReply({
-        flags: 64
+    questions[customId].forEach(q => {
+        const input = new TextInputBuilder()
+            .setCustomId(q.id)
+            .setLabel(q.label)
+            .setStyle(q.style)
+            .setRequired(q.required);
+        modal.addComponents(new ActionRowBuilder().addComponents(input));
     });
-    const {
-        user,
-        customId,
-        guild,
-        client
-    } = interaction;
-
-    const basvuruConfig = {
-        'yetkili-basvuru-modal': {
-            namePrefix: 'yetkili-b-',
-            resultChannelId: '1268544826727600168',
-            requiredRoles: ['1243478734078742579', '1216094391060529393', '1188389290292551740'],
-            applicationType: 'Yetkili',
-            modalValues: [{
-                id: 'isim-yas-input',
-                label: 'İsim ve yaşınız nedir?'
-            }, {
-                id: 'neden-basvuru-input',
-                label: 'Neden bu pozisyona başvuruyorsunuz?'
-            }, {
-                id: 'deneyim-input',
-                label: 'Bir deneyiminiz var mı?'
-            }, {
-                id: 'aktiflik-input',
-                label: 'Sunucuda ne kadar aktif olabilirsiniz?'
-            }, {
-                id: 'neden-secilmeli-input',
-                label: 'Neden sizi seçmeliyiz?'
-            }]
-        },
-        'helper-basvuru-modal': {
-            namePrefix: 'helper-b-',
-            resultChannelId: '1268544982768160788',
-            requiredRoles: ['1243478734078742579', '1216094391060529393', '1188389290292551740'],
-            applicationType: 'Helper',
-            modalValues: [{
-                id: 'isim-yas-input',
-                label: 'İsim ve yaşınız nedir?'
-            }, {
-                id: 'helper-deneyim-input',
-                label: 'Helper deneyiminiz var mı?'
-            }, {
-                id: 'aktiflik-input',
-                label: 'Sunucuda ne kadar aktif olabilirsiniz?'
-            }, {
-                id: 'owo-bilgi-input',
-                label: 'OwO bot bilginiz nasıl?'
-            }, {
-                id: 'takim-meta-input',
-                label: 'Takım metası bilginiz nedir?'
-            }]
-        }
-    };
-
-    const config = basvuruConfig[customId];
-    if (!config) {
-        console.error(`[HATA] Geçersiz modal ID: ${customId}`);
-        return interaction.editReply({
-            content: 'Geçersiz bir başvuru türüyle karşılaşıldı. Lütfen bot sahibine bildirin.'
-        });
-    }
-
-    const CATEGORY_ID = '1268509251911811175';
-
-    // Başvuru sonuçlarını içeren embed oluştur
-    const embed = new EmbedBuilder()
-        .setTitle(`${config.applicationType} Başvuru`)
-        .setAuthor({
-            name: user.tag,
-            iconURL: user.displayAvatarURL()
-        })
-        .setDescription(`**Başvuru Yapan:** ${user}`)
-        .addFields(
-            config.modalValues.map(q => ({
-                name: `❓ ${q.label}`,
-                value: interaction.fields.getTextInputValue(q.id) || 'Cevap verilmedi',
-                inline: false,
-            }))
-        )
-        .setColor('#0099ff')
-        .setFooter({
-            text: `${guild.name} | ${config.applicationType} Başvurusu`,
-            iconURL: guild.iconURL()
-        })
-        .setThumbnail(user.displayAvatarURL())
-        .setTimestamp();
-
-    // Sonuç kanalına embed'i gönder
-    const resultChannel = client.channels.cache.get(config.resultChannelId);
-    if (!resultChannel) {
-        console.error(`[KRİTİK HATA] Sonuç kanalı bulunamadı: ${config.resultChannelId}`);
-        return interaction.editReply({
-            content: 'Hata: Başvuru sonucu gönderilecek kanal bulunamadı. Lütfen bot sahibine bildirin.'
-        });
-    }
-
-    // Özel emojilerin ID'leri
-    const EMOJI_ONAY_ID = '1284130169417764907';
-    const EMOJI_RED_ID = '1284130046902145095';
-
-    const sentMessage = await resultChannel.send({
-        content: `<@&1243478734078742579>`, // Yetkili rolünü etiketle
-        embeds: [embed]
-    });
-
-    // Emojileri tepki olarak ekle
-    await sentMessage.react(EMOJI_ONAY_ID);
-    await sentMessage.react(EMOJI_RED_ID);
-
-    // Başvurunun durumunu takip etmek için özel bir filtre oluştur
-    const filter = (reaction, reactor) => {
-        console.log(`[DEBUG] Reaksiyon filtresi tetiklendi.`);
-        const isCorrectEmoji = reaction.emoji.id === EMOJI_ONAY_ID || reaction.emoji.id === EMOJI_RED_ID;
-        console.log(`[DEBUG] Emoji doğru mu? ${isCorrectEmoji}`);
-        
-        const member = interaction.guild.members.cache.get(reactor.id);
-        console.log(`[DEBUG] Reaksiyonu yapan kullanıcının ID'si: ${reactor.id}, Üye nesnesi bulundu mu? ${!!member}`);
-
-        const isAuthorizedUser = member && config.requiredRoles.some(roleId => member.roles.cache.has(roleId));
-        console.log(`[DEBUG] Kullanıcı yetkili mi? ${isAuthorizedUser}`);
-
-        return isCorrectEmoji && isAuthorizedUser;
-    };
-
-
-    // Mesaj üzerinde reaksiyonları bekle
-    const collector = sentMessage.createReactionCollector({
-        filter,
-        max: 1,
-        time: 3600000
-    }); // 1 saat bekleme süresi
-
-    collector.on('collect', async (reaction, reactor) => {
-        console.log(`[DEBUG] Reaksiyon toplandı! Kullanıcı: ${reactor.tag}`);
-
-        const isApproved = reaction.emoji.id === EMOJI_ONAY_ID;
-        const statusText = isApproved ? 'ONAYLANDI' : 'REDDEDİLDİ';
-
-        const finalEmbed = new EmbedBuilder()
-            .setTitle(`${config.applicationType} Başvuru`)
-            .setAuthor({
-                name: user.tag, // Başvuru yapan kullanıcının etiketini kullan
-                iconURL: user.displayAvatarURL()
-            })
-            .setDescription(`**Başvuru Sonuçlandı!**`)
-            .addFields({
-                name: `Başvuru Durumu`,
-                value: `Başvurunuz, <@${reactor.id}> tarafından **${statusText}**`
-            })
-            .setColor(isApproved ? '#2ecc71' : '#e74c3c')
-            .setFooter({
-                text: `${guild.name}`,
-                iconURL: guild.iconURL()
-            })
-            .setTimestamp();
-
-        // Başvuru sonuç kanalına final mesajını gönder
-        console.log(`[DEBUG] Sonuç mesajı gönderiliyor. Sonuç kanalı ID: 1277638999464214558`);
-        const finalResultChannel = client.channels.cache.get('1277638999464214558');
-
-        if (finalResultChannel) {
-            try {
-                await finalResultChannel.send({
-                    content: `**Başvuru Sonuçlandı!**`,
-                    embeds: [finalEmbed]
-                });
-                console.log(`[DEBUG] Sonuç mesajı başarıyla gönderildi.`);
-            } catch (error) {
-                console.error(`[HATA] Sonuç mesajı gönderilemedi! Hata:`, error);
-            }
-        } else {
-            console.error('[KRİTİK HATA] Sonuç kanalı bulunamadı!');
-        }
-
-        // Orijinal başvuru mesajındaki emojileri kaldır
-        await sentMessage.reactions.removeAll().catch(error => console.error('Emojiler kaldırılamadı:', error));
-    });
-
-    collector.on('end', collected => {
-        console.log(`[DEBUG] Toplayıcı sona erdi. Toplanan reaksiyon sayısı: ${collected.size}`);
-        if (collected.size === 0) {
-            // Süre dolduğunda veya toplanan reaksiyon olmadığında
-            sentMessage.reactions.removeAll().catch(error => console.error('Emojiler kaldırılamadı:', error));
-        }
-    });
-
-    // Kullanıcıya başvurunun alındığını bildir
-    await interaction.editReply({
-        content: `Başvurunuz başarıyla alındı. Lütfen yetkililerin yanıtını bekleyin.`
-    });
-}
-
-/**
- * Soru talep butonu tıklandığında modalı (formu) gösterir.
- * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
- */
-async function handleSoruTalep(interaction) {
-    const modal = new ModalBuilder()
-        .setCustomId('soru-talep-modal')
-        .setTitle('Soru Talep Formu');
-
-    const questionInput = new TextInputBuilder()
-        .setCustomId('soru-input')
-        .setLabel('Sorunuzu buraya yazın')
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(true);
-
-    modal.addComponents(new ActionRowBuilder().addComponents(questionInput));
 
     try {
         await interaction.showModal(modal);
     } catch (e) {
+        console.error('[HATA] Başvuru modalı gösterilirken hata:', e);
         await interaction.reply({
             content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.',
             ephemeral: true
@@ -410,94 +157,175 @@ async function handleSoruTalep(interaction) {
 }
 
 /**
- * Soru talep modalı doldurulup gönderildiğinde işler.
+ * Başvuru modalı gönderildiğinde işler. Embed oluşturup başvuruyu yetkili kanalına gönderir
+ * ve reaksiyon kolektörü başlatır.
  * @param {import('discord.js').ModalSubmitInteraction} interaction - Gelen modal etkileşimi.
  */
-async function processSoruTalepModal(interaction) {
+async function processBasvuruModal(interaction) {
     await interaction.deferReply({
-        flags: 64
+        ephemeral: true
     });
     const {
         user,
-        guild
+        guild,
+        client,
+        customId
     } = interaction;
-    const soru = interaction.fields.getTextInputValue('soru-input');
 
-    const CATEGORY_ID = '1268509251911811175';
+    const config = {
+        'yetkili-basvuru-modal': {
+            type: 'Yetkili',
+            channelId: '1268544826727600168',
+            requiredRoles: ['1243478734078742579', '1216094391060529393', '1188389290292551740'],
+            questions: [{
+                id: 'isim-yas',
+                label: 'İsim ve yaşınız'
+            }, {
+                id: 'neden-basvuru',
+                label: 'Neden bu pozisyona başvuruyorsunuz?'
+            }, {
+                id: 'deneyim',
+                label: 'Deneyim'
+            }, {
+                id: 'aktiflik',
+                label: 'Ne kadar aktifsiniz?'
+            }, {
+                id: 'neden-secilmeli',
+                label: 'Neden sizi seçmeliyiz?'
+            }]
+        },
+        'helper-basvuru-modal': {
+            type: 'Helper',
+            channelId: '1268544982768160788',
+            requiredRoles: ['1243478734078742579', '1216094391060529393', '1188389290292551740'],
+            questions: [{
+                id: 'isim-yas',
+                label: 'İsim ve yaşınız'
+            }, {
+                id: 'helper-deneyim',
+                label: 'Helper deneyiminiz'
+            }, {
+                id: 'aktiflik',
+                label: 'Ne kadar aktifsiniz?'
+            }, {
+                id: 'owo-bilgi',
+                label: 'OwO bot bilginiz'
+            }, {
+                id: 'takim-meta',
+                label: 'Takım metası bilginiz'
+            }]
+        }
+    };
 
-    const cleanUsername = user.username.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
-    const channelName = `soru-talep-${cleanUsername}`;
+    const basvuruConfig = config[customId];
+    if (!basvuruConfig) return;
 
-    const existingChannel = guild.channels.cache.find(
-        c => c.name === channelName && c.parentId === CATEGORY_ID
-    );
+    // Başvuru sonuçlarını içeren embed oluştur
+    const basvuruEmbed = new EmbedBuilder()
+        .setTitle(`${basvuruConfig.type} Başvurusu`)
+        .setAuthor({
+            name: user.tag,
+            iconURL: user.displayAvatarURL()
+        })
+        .setDescription(`**Başvuru Yapan:** ${user}`)
+        .addFields(basvuruConfig.questions.map(q => ({
+            name: `❓ ${q.label}`,
+            value: interaction.fields.getTextInputValue(q.id) || 'Cevap verilmedi',
+            inline: false,
+        })))
+        .setColor('#0099ff')
+        .setFooter({
+            text: `${guild.name} | ${basvuruConfig.type} Başvurusu`,
+            iconURL: guild.iconURL()
+        })
+        .setThumbnail(user.displayAvatarURL())
+        .setTimestamp();
 
-    if (existingChannel) {
+    const resultChannel = client.channels.cache.get(basvuruConfig.channelId);
+    if (!resultChannel) {
+        console.error(`[KRİTİK HATA] Sonuç kanalı bulunamadı: ${basvuruConfig.channelId}`);
         return interaction.editReply({
-            content: `Zaten aktif bir soru talep kanalınız var: <#${existingChannel.id}>`
+            content: 'Hata: Başvuru sonucu gönderilecek kanal bulunamadı. Lütfen bot sahibine bildirin.'
         });
     }
 
-    let newChannel;
-    try {
-        newChannel = await guild.channels.create({
-            name: channelName,
-            type: ChannelType.GuildText,
-            parent: CATEGORY_ID,
-            permissionOverwrites: [{
-                id: guild.roles.everyone.id,
-                deny: [PermissionsBitField.Flags.ViewChannel]
-            }, {
-                id: user.id,
-                allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
-            }, ],
-        });
+    // Yetkili rolünü etiketle
+    const yetkiliRoleId = '1243478734078742579';
 
-        const soruEmbed = new EmbedBuilder()
-            .setTitle('Soru Talebi')
+    const sentMessage = await resultChannel.send({
+        content: `<@&${yetkiliRoleId}> Yeni bir ${basvuruConfig.type} başvurusu var.`,
+        embeds: [basvuruEmbed]
+    });
+
+    const EMOJI_ONAY_ID = '1284130169417764907';
+    const EMOJI_RED_ID = '1284130046902145095';
+
+    await sentMessage.react(EMOJI_ONAY_ID);
+    await sentMessage.react(EMOJI_RED_ID);
+
+    // Reaksiyon toplayıcı
+    const collector = sentMessage.createReactionCollector({
+        filter: (reaction, reactor) => {
+            const member = interaction.guild.members.cache.get(reactor.id);
+            const isAuthorized = member && basvuruConfig.requiredRoles.some(roleId => member.roles.cache.has(roleId));
+            return (reaction.emoji.id === EMOJI_ONAY_ID || reaction.emoji.id === EMOJI_RED_ID) && isAuthorized;
+        },
+        max: 1,
+        time: 3600000 // 1 saat
+    });
+
+    collector.on('collect', async (reaction, reactor) => {
+        const isApproved = reaction.emoji.id === EMOJI_ONAY_ID;
+        const statusText = isApproved ? 'ONAYLANDI' : 'REDDEDİLDİ';
+
+        const finalEmbed = new EmbedBuilder()
+            .setTitle(`MED Başvuru`)
             .setAuthor({
                 name: user.tag,
                 iconURL: user.displayAvatarURL()
             })
-            .setDescription(`**Soru Soran:** ${user}\n**Soru:**\n${soru}`)
-            .setColor('#3498db')
+            .setDescription(`**Başvurunuz sonuçlandı!**`)
+            .addFields({
+                name: `Başvuru Durumu`,
+                value: `${basvuruConfig.type} başvurunuz, <@${reactor.id}> kişisi tarafından **${statusText}**`,
+                inline: false
+            })
+            .setColor(isApproved ? '#2ecc71' : '#e74c3c')
+            .setFooter({
+                text: `${guild.name} | ${basvuruConfig.type} Başvurusu`,
+                iconURL: guild.iconURL()
+            })
             .setTimestamp();
 
-        // Yetkili rolünü etiketle ve embed'i gönder
-        await newChannel.send({
-            content: `Merhaba yetkililer, <@${user.id}> adlı kullanıcının bir soru talebi var.`,
-            embeds: [soruEmbed]
-        });
-
-        await interaction.editReply({
-            content: `Soru talep kanalınız oluşturuldu: ${newChannel}. Bir yetkili en kısa sürede size yardımcı olacaktır.`
-        });
-
-        // Kanalı 5 dakika sonra kapatma
-        setTimeout(() => {
-            newChannel.delete().catch(err => {
-                console.error('[HATA] Soru talep kanalı silinemedi:', err);
+        const finalResultChannel = client.channels.cache.get('1277638999464214558');
+        if (finalResultChannel) {
+            await finalResultChannel.send({
+                embeds: [finalEmbed]
             });
-        }, 300000); // 5 dakika = 300000 ms
-
-    } catch (error) {
-        console.error('[KRİTİK HATA] Soru talep kanalı oluşturulurken veya işlenirken hata:', error);
-        if (newChannel) {
-            newChannel.delete().catch(err => console.error('[HATA] Hata oluştuğunda kanal silinemedi:', err));
         }
-        await interaction.editReply({
-            content: 'Soru talep kanalı oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.'
-        });
-    }
+
+        // Reaksiyonları kaldır
+        await sentMessage.reactions.removeAll().catch(error => console.error('Emojiler kaldırılamadı:', error));
+    });
+
+    collector.on('end', collected => {
+        if (collected.size === 0) {
+            sentMessage.reactions.removeAll().catch(error => console.error('Emojiler kaldırılamadı:', error));
+        }
+    });
+
+    await interaction.editReply({
+        content: `Başvurunuz başarıyla alındı. Yetkililer en kısa sürede değerlendirecektir.`
+    });
 }
 
 /**
- * Üst yetkiliyle görüşme butonu tıklandığında modalı (formu) gösterir.
+ * Üst yetkiliyle görüşme butonu tıklandığında modalı gösterir.
  * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
  */
-async function handleGorus(interaction) {
+async function handleGorusmeButton(interaction) {
     const modal = new ModalBuilder()
-        .setCustomId('gorus-modal')
+        .setCustomId('gorusme-modal')
         .setTitle('Üst Yetkiliyle Görüşme Talebi');
 
     const konuInput = new TextInputBuilder()
@@ -520,6 +348,7 @@ async function handleGorus(interaction) {
     try {
         await interaction.showModal(modal);
     } catch (e) {
+        console.error('[HATA] Görüşme modalı gösterilirken hata:', e);
         await interaction.reply({
             content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.',
             ephemeral: true
@@ -528,12 +357,12 @@ async function handleGorus(interaction) {
 }
 
 /**
- * Görüşme modalı doldurulup gönderildiğinde işler.
+ * Görüşme modalı gönderildiğinde işler. Yeni bir kanal oluşturur ve embedi gönderir.
  * @param {import('discord.js').ModalSubmitInteraction} interaction - Gelen modal etkileşimi.
  */
-async function processGorusModal(interaction) {
+async function processGorusmeModal(interaction) {
     await interaction.deferReply({
-        flags: 64
+        ephemeral: true
     });
     const {
         user,
@@ -543,9 +372,10 @@ async function processGorusModal(interaction) {
     const detay = interaction.fields.getTextInputValue('detay-input');
 
     const CATEGORY_ID = '1268509251911811175';
+    const GORUSME_YETKILISI_ROLE_ID = '1236317902295138304';
 
     const cleanUsername = user.username.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
-    const channelName = `gorus-${cleanUsername}`;
+    const channelName = `gorusme-${cleanUsername}`;
 
     const existingChannel = guild.channels.cache.find(
         c => c.name === channelName && c.parentId === CATEGORY_ID
@@ -557,9 +387,8 @@ async function processGorusModal(interaction) {
         });
     }
 
-    let newChannel;
     try {
-        newChannel = await guild.channels.create({
+        const newChannel = await guild.channels.create({
             name: channelName,
             type: ChannelType.GuildText,
             parent: CATEGORY_ID,
@@ -570,12 +399,12 @@ async function processGorusModal(interaction) {
                 id: user.id,
                 allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
             }, {
-                id: '1243478734078742579', // Üst yetkili rolü
+                id: GORUSME_YETKILISI_ROLE_ID,
                 allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
             }],
         });
 
-        const gorusEmbed = new EmbedBuilder()
+        const gorusmeEmbed = new EmbedBuilder()
             .setTitle('Üst Yetkiliyle Görüşme Talebi')
             .setAuthor({
                 name: user.tag,
@@ -585,30 +414,71 @@ async function processGorusModal(interaction) {
             .setColor('#e74c3c')
             .setTimestamp();
 
-        // Yetkili rolünü etiketle ve embed'i gönder
+        // Kanalı kapatma butonu
+        const closeButton = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+            .setCustomId('close-gorusme-channel')
+            .setLabel('Görüşmeyi Kapat')
+            .setStyle(ButtonStyle.Danger)
+            .setEmoji('🔒')
+        );
+
         await newChannel.send({
-            content: `<@&1243478734078742579> Yeni bir görüşme talebi var.`,
-            embeds: [gorusEmbed]
+            content: `<@&${GORUSME_YETKILISI_ROLE_ID}> Yeni bir görüşme talebi var.`,
+            embeds: [gorusmeEmbed],
+            components: [closeButton]
         });
 
         await interaction.editReply({
             content: `Üst yetkiliyle görüşme kanalınız oluşturuldu: ${newChannel}. Lütfen yetkililerin yanıtını bekleyin.`
         });
 
-        // Kanalı 30 dakika sonra kapatma
-        setTimeout(() => {
-            newChannel.delete().catch(err => {
-                console.error('[HATA] Görüşme kanalı silinemedi:', err);
-            });
-        }, 1800000); // 30 dakika = 1800000 ms
-
     } catch (error) {
         console.error('[KRİTİK HATA] Görüşme kanalı oluşturulurken veya işlenirken hata:', error);
-        if (newChannel) {
-            newChannel.delete().catch(err => console.error('[HATA] Hata oluştuğunda kanal silinemedi:', err));
-        }
         await interaction.editReply({
             content: 'Görüşme kanalı oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.'
+        });
+    }
+}
+
+/**
+ * Görüşme kanalını kapatma butonunu işler.
+ * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
+ */
+async function handleCloseChannelButton(interaction) {
+    // deferUpdate ile anında yanıt ver.
+    await interaction.deferUpdate();
+
+    const {
+        channel,
+        member
+    } = interaction;
+    const GORUSME_YETKILISI_ROLE_ID = '1236317902295138304';
+    const GORUSME_KATEGORI_ID = '1268509251911811175';
+
+    // Sadece görüşme kanallarında çalışır
+    if (channel.parentId !== GORUSME_KATEGORI_ID) {
+        return;
+    }
+
+    // Yetkili rolüne sahip olanlar veya kanalı açan kişi kanalı kapatabilir.
+    const hasPermission = member.roles.cache.has(GORUSME_YETKILISI_ROLE_ID);
+
+    if (!hasPermission) {
+        // Yetkisi olmayan kişiye ephemeral bir mesaj gönder
+        return interaction.followUp({
+            content: 'Bu kanalı kapatma yetkiniz bulunmamaktadır.',
+            ephemeral: true
+        });
+    }
+
+    try {
+        await channel.delete();
+    } catch (error) {
+        console.error('[HATA] Kanal silinirken bir hata oluştu:', error);
+        await interaction.followUp({
+            content: 'Kanal silinirken bir hata oluştu. Lütfen manuel olarak silmeyi deneyin.',
+            ephemeral: true
         });
     }
 }
