@@ -27,13 +27,13 @@ module.exports = {
         // --- BUTON ETKİLEŞİMLERİ İŞLEME KISMI ---
         if (interaction.isButton()) {
             switch (interaction.customId) {
-                // Yetkili ve Helper başvuru butonları
-                case 'yetkili-basvuru':
-                case 'helper-basvuru':
+                // LÜTFEN AŞAĞIDAKİ CUSTOM ID'LERİ KENDİ BUTON ID'LERİNLE DEĞİŞTİR!
+                case 'yetkili-basvuru': // Burayı kendi yetkili başvuru butonu ID'nle değiştir
+                case 'helper-basvuru': // Burayı kendi helper başvuru butonu ID'nle değiştir
                     await handleBasvuruButton(interaction);
                     break;
-                // Üst yetkiliyle görüşme talep butonu
-                case 'ust-yetkili-gorusme':
+                // LÜTFEN AŞAĞIDAKİ CUSTOM ID'Yİ KENDİ BUTON ID'NLE DEĞİŞTİR!
+                case 'ust-yetkili-gorusme': // Burayı kendi görüşme butonu ID'nle değiştir
                     await handleGorusmeButton(interaction);
                     break;
                 // Kanal kapatma butonu
@@ -41,7 +41,8 @@ module.exports = {
                     await handleCloseChannelButton(interaction);
                     break;
                 default:
-                    // Tanımsız butonları görmezden gel
+                    // Tanımsız butonları görmezden gel ve konsola yazdır.
+                    console.log(`[HATA AYIKLAMA] Tanınmayan Buton ID: ${interaction.customId}`);
                     return;
             }
         }
