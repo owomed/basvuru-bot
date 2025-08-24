@@ -28,12 +28,12 @@ module.exports = {
         if (interaction.isButton()) {
             switch (interaction.customId) {
                 // LÜTFEN AŞAĞIDAKİ CUSTOM ID'LERİ KENDİ BUTON ID'LERİNLE DEĞİŞTİR!
-                case 'yetkili-basvuru': // Burayı kendi yetkili başvuru butonu ID'nle değiştir
-                case 'helper-basvuru': // Burayı kendi helper başvuru butonu ID'nle değiştir
+                case 'yetkiliBaşvuru': // KONSOLDA GÖRÜNEN BUTON ID'SİNE GÖRE GÜNCELLENDİ
+                case 'helperBaşvuru': // KONSOLDA GÖRÜNEN BUTON ID'SİNE GÖRE GÜNCELLENDİ
                     await handleBasvuruButton(interaction);
                     break;
                 // LÜTFEN AŞAĞIDAKİ CUSTOM ID'Yİ KENDİ BUTON ID'NLE DEĞİŞTİR!
-                case 'ust-yetkili-gorusme': // Burayı kendi görüşme butonu ID'nle değiştir
+                case 'görüş': // KONSOLDA GÖRÜNEN BUTON ID'SİNE GÖRE GÜNCELLENDİ
                     await handleGorusmeButton(interaction);
                     break;
                 // Kanal kapatma butonu
@@ -83,7 +83,7 @@ async function handleBasvuruButton(interaction) {
         .setTitle(`${basvuruTuru} Başvuru Formu`);
 
     const questions = {
-        'yetkili-basvuru': [{
+        'yetkiliBaşvuru': [{
             id: 'isim-yas',
             label: 'İsim ve yaşınız nedir?',
             required: true,
@@ -109,7 +109,7 @@ async function handleBasvuruButton(interaction) {
             required: true,
             style: TextInputStyle.Paragraph
         }],
-        'helper-basvuru': [{
+        'helperBaşvuru': [{
             id: 'isim-yas',
             label: 'İsim ve yaşınız nedir?',
             required: true,
