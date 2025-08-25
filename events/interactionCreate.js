@@ -1,4 +1,4 @@
-// Bu dosya, Discord.js v14 kullanarak çeşitli interaksiyonları yönetir:
+e// Bu dosya, Discord.js v14 kullanarak çeşitli interaksiyonları yönetir:
 // Buton tıklamaları, modal gönderimleri ve reaksiyon kolektörleri.
 
 const {
@@ -18,6 +18,12 @@ const {
 module.exports = {
     name: Events.InteractionCreate,
     async execute(interaction) {
+        // ZAMAN AŞIMI HATASI GİDERİLDİ:
+        // Eğer etkileşim zaten ertelenmiş veya yanıtlanmışsa,
+        // tekrar işlem yapmaya çalışarak hata vermeyi önler.
+        if (interaction.deferred || interaction.replied) {
+            return;
+        }
 
         // Sadece buton ve modal etkileşimlerini işleme al, diğerlerini yok say.
         if (!interaction.isButton() && !interaction.isModalSubmit()) {
@@ -80,8 +86,9 @@ module.exports = {
  * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
  */
 async function handleBasvuruFirstStep(interaction) {
+    // UYARI GİDERİLDİ: "ephemeral" yerine "flags" kullanıldı.
     await interaction.deferReply({
-        ephemeral: true
+        flags: 64
     });
 
     const basvuruTuru = interaction.customId.includes('yetkili') ? 'Yetkili' : 'Helper';
@@ -197,8 +204,9 @@ async function handleBasvuruSecondStep(interaction) {
  * @param {import('discord.js').ModalSubmitInteraction} interaction - Gelen modal etkileşimi.
  */
 async function processBasvuruModal(interaction) {
+    // UYARI GİDERİLDİ: "ephemeral" yerine "flags" kullanıldı.
     await interaction.deferReply({
-        ephemeral: true
+        flags: 64
     });
     const {
         user,
@@ -322,8 +330,9 @@ async function processBasvuruModal(interaction) {
  * @param {import('discord.js').ButtonInteraction} interaction - Gelen buton etkileşimi.
  */
 async function handleResultButtons(interaction) {
+    // UYARI GİDERİLDİ: "ephemeral" yerine "flags" kullanıldı.
     await interaction.deferReply({
-        ephemeral: true
+        flags: 64
     });
 
     const {
@@ -341,23 +350,29 @@ async function handleResultButtons(interaction) {
     if (!hasPermission) {
         return interaction.editReply({
             content: 'Bu butonu kullanma yetkiniz yok.',
-            ephemeral: true
+            flags: 64
         });
     }
+
+    // Orijinal başvuru mesajındaki embed'i al
+    const originalEmbed = interaction.message.embeds[0];
+    const footerText = originalEmbed?.footer?.text;
+    const basvuruType = footerText ? footerText.split('|')[1]?.trim()?.split(' ')[0] : 'Bilinmeyen';
 
     // Buton ID'sinden başvuran kullanıcının ID'sini çek
     const applicantId = customId.split('-').pop(); // .split('-')[2] yerine .pop() daha güvenilir
     const isApproved = customId.startsWith('onayla');
-    const statusText = isApproved ? 'onaylandı ' : 'reddedildi';
+    const statusText = isApproved ? 'onaylandı' : 'reddedildi';
 
+    // Yeni: Başvurunun türünü embed'e ekle
     const finalEmbed = new EmbedBuilder()
         .setTitle(`Başvurunuz sonuçlandı!`)
         .setAuthor({
             name: 'MED Başvuru'
         })
-        .setDescription(`Başvuru yapan:\n<@${applicantUser.id}>`)
+        .setDescription(`Başvuru yapan:\n<@${applicantId}>`)
         .addFields({
-            name: ` ${basvuruConfig.type}Başvurusu Durumu`,
+            name: `${basvuruType} Başvurusu Durumu`,
             value: `Başvurunuz, <@${interaction.user.id}> kişisi tarafından **${statusText}**`,
             inline: false
         })
@@ -382,7 +397,7 @@ async function handleResultButtons(interaction) {
 
     // Başvuru sonuç kanalına mesaj gönder (her iki yöntem de denenecek)
     let finalResultChannel = client.channels.cache.get('1277638999464214558');
-
+    
     if (!finalResultChannel) {
         console.log('[HATA AYIKLAMA] Sonuç kanalı önbellekte bulunamadı. Discord\'dan çekiliyor...');
         try {
@@ -392,7 +407,7 @@ async function handleResultButtons(interaction) {
             return interaction.editReply({ content: 'Sonuç kanalı bulunamadı. Lütfen bot sahibine bildirin.' });
         }
     }
-
+    
     if (finalResultChannel) {
         try {
             await finalResultChannel.send({ embeds: [finalEmbed] });
@@ -421,13 +436,13 @@ async function handleResultButtons(interaction) {
                 .setStyle(ButtonStyle.Danger)
                 .setDisabled(true),
             );
-
+        
         // Orijinal mesajı düzenle ve butonları kaldır
         await originalMessage.edit({
             components: [disabledActionRow]
         }).catch(e => console.error('[HATA] Orijinal mesaj güncellenemedi:', e));
     }
-
+    
     await interaction.editReply({
         content: `Başvuru başarıyla **${statusText}** olarak işaretlendi. Sonuç kanala gönderildi.`
     });
@@ -466,7 +481,7 @@ async function handleGorusmeButton(interaction) {
         console.error('[HATA] Görüşme modalı gösterilirken hata:', e);
         await interaction.reply({
             content: 'Form açılırken bir hata oluştu. Lütfen tekrar deneyin.',
-            ephemeral: true
+            flags: 64
         });
     }
 }
@@ -476,8 +491,9 @@ async function handleGorusmeButton(interaction) {
  * @param {import('discord.js').ModalSubmitInteraction} interaction - Gelen modal etkileşimi.
  */
 async function processGorusmeModal(interaction) {
+    // UYARI GİDERİLDİ: "ephemeral" yerine "flags" kullanıldı.
     await interaction.deferReply({
-        ephemeral: true
+        flags: 64
     });
     const {
         user,
@@ -583,7 +599,7 @@ async function handleCloseChannelButton(interaction) {
         // Yetkisi olmayan kişiye ephemeral bir mesaj gönder
         return interaction.followUp({
             content: 'Bu kanalı kapatma yetkiniz bulunmamaktadır.',
-            ephemeral: true
+            flags: 64
         });
     }
 
@@ -593,7 +609,7 @@ async function handleCloseChannelButton(interaction) {
         console.error('[HATA] Kanal silinirken bir hata oluştu:', error);
         await interaction.followUp({
             content: 'Kanal silinirken bir hata oluştu. Lütfen manuel olarak silmeyi deneyin.',
-            ephemeral: true
+            flags: 64
         });
     }
 }
