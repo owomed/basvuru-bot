@@ -275,7 +275,7 @@ async function processBasvuruModal(interaction) {
         })
         .setThumbnail(user.displayAvatarURL())
         .setTimestamp();
-        
+
     const yetkiliRoleId = '1243478734078742579';
 
     const resultChannel = client.channels.cache.get(basvuruConfig.channelId);
@@ -325,7 +325,7 @@ async function handleResultButtons(interaction) {
     await interaction.deferReply({
         ephemeral: true
     });
-    
+
     const {
         customId,
         user,
@@ -353,7 +353,7 @@ async function handleResultButtons(interaction) {
     const finalEmbed = new EmbedBuilder()
         .setTitle(`Başvurunuz sonuçlandı!`)
         .setAuthor({
-            name: 'MED Başvuru'
+            name: MED Başvuru
         })
         .setDescription(`\`Başvuru yapan:`\ /n <@${applicantUser.id}`)
         .addFields({
@@ -382,7 +382,7 @@ async function handleResultButtons(interaction) {
 
     // Başvuru sonuç kanalına mesaj gönder (her iki yöntem de denenecek)
     let finalResultChannel = client.channels.cache.get('1277638999464214558');
-    
+
     if (!finalResultChannel) {
         console.log('[HATA AYIKLAMA] Sonuç kanalı önbellekte bulunamadı. Discord\'dan çekiliyor...');
         try {
@@ -392,7 +392,7 @@ async function handleResultButtons(interaction) {
             return interaction.editReply({ content: 'Sonuç kanalı bulunamadı. Lütfen bot sahibine bildirin.' });
         }
     }
-    
+
     if (finalResultChannel) {
         try {
             await finalResultChannel.send({ embeds: [finalEmbed] });
@@ -421,13 +421,13 @@ async function handleResultButtons(interaction) {
                 .setStyle(ButtonStyle.Danger)
                 .setDisabled(true),
             );
-        
+
         // Orijinal mesajı düzenle ve butonları kaldır
         await originalMessage.edit({
             components: [disabledActionRow]
         }).catch(e => console.error('[HATA] Orijinal mesaj güncellenemedi:', e));
     }
-    
+
     await interaction.editReply({
         content: `Başvuru başarıyla **${statusText}** olarak işaretlendi. Sonuç kanala gönderildi.`
     });
@@ -571,4 +571,29 @@ async function handleCloseChannelButton(interaction) {
     const GORUSME_YETKILISI_ROLE_ID = '1236317902295138304';
     const GORUSME_KATEGORI_ID = '1268509251911811175';
 
-    // Sadece gö
+    // Sadece görüşme kanallarında çalışır
+    if (channel.parentId !== GORUSME_KATEGORI_ID) {
+        return;
+    }
+
+    // Yetkili rolüne sahip olanlar veya kanalı açan kişi kanalı kapatabilir.
+    const hasPermission = member.roles.cache.has(GORUSME_YETKILISI_ROLE_ID);
+
+    if (!hasPermission) {
+        // Yetkisi olmayan kişiye ephemeral bir mesaj gönder
+        return interaction.followUp({
+            content: 'Bu kanalı kapatma yetkiniz bulunmamaktadır.',
+            ephemeral: true
+        });
+    }
+
+    try {
+        await channel.delete();
+    } catch (error) {
+        console.error('[HATA] Kanal silinirken bir hata oluştu:', error);
+        await interaction.followUp({
+            content: 'Kanal silinirken bir hata oluştu. Lütfen manuel olarak silmeyi deneyin.',
+            ephemeral: true
+        });
+    }
+}
