@@ -353,7 +353,7 @@ async function handleResultButtons(interaction) {
     const finalEmbed = new EmbedBuilder()
         .setTitle(`Başvurunuz sonuçlandı!`)
         .setAuthor({
-            name: MED Başvuru
+            name: 'MED Başvuru'
         })
         .setDescription(`\`Başvuru yapan:`\ /n <@${applicantUser.id}`)
         .addFields({
