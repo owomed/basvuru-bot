@@ -348,16 +348,18 @@ async function handleResultButtons(interaction) {
     // Buton ID'sinden başvuran kullanıcının ID'sini çek
     const applicantId = customId.split('-').pop(); // .split('-')[2] yerine .pop() daha güvenilir
     const isApproved = customId.startsWith('onayla');
-    const statusText = isApproved ? 'onaylandı ' : 'reddedildi';
+    const statusText = isApproved ? 'ONAYLANDI' : 'REDDEDİLDİ';
 
     const finalEmbed = new EmbedBuilder()
-        .setTitle(`Başvurunuz sonuçlandı!`)
+        // HATA GİDERİLDİ: Boşluklu anahtar tırnak içine alındı.
+        .setTitle('MED Başvuru')
         .setAuthor({
-            name: MED Başvuru
+            name: user.tag,
+            iconURL: user.displayAvatarURL()
         })
-        .setDescription(`\`Başvuru yapan:`\ /n <@${applicantUser.id}`)
+        .setDescription(`**Başvurunuz sonuçlandı!**`)
         .addFields({
-            name: ` ${basvuruConfig.type}Başvurusu Durumu`,
+            name: `Başvuru Durumu`,
             value: `Başvurunuz, <@${interaction.user.id}> kişisi tarafından **${statusText}**`,
             inline: false
         })
