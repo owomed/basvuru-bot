@@ -362,7 +362,7 @@ async function handleResultButtons(interaction) {
     // Buton ID'sinden başvuran kullanıcının ID'sini çek
     const applicantId = customId.split('-').pop(); // .split('-')[2] yerine .pop() daha güvenilir
     const isApproved = customId.startsWith('onayla');
-    const statusText = isApproved ? 'onaylandı <:med_onaylandi:1284130169417764907>' : 'reddedildi <:med_onaylandi:1284130169417764907>';
+    const statusText = isApproved ? 'onaylandı <:med_onaylandi:1284130169417764907>' : 'reddedildi <:med_reddedildi:1284130046902145095>';
 
     // Yeni: Başvurunun türünü embed'e ekle
     const finalEmbed = new EmbedBuilder()
