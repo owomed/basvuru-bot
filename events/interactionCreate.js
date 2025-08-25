@@ -348,18 +348,16 @@ async function handleResultButtons(interaction) {
     // Buton ID'sinden başvuran kullanıcının ID'sini çek
     const applicantId = customId.split('-').pop(); // .split('-')[2] yerine .pop() daha güvenilir
     const isApproved = customId.startsWith('onayla');
-    const statusText = isApproved ? 'ONAYLANDI' : 'REDDEDİLDİ';
+    const statusText = isApproved ? 'onaylandı ' : 'reddedildi';
 
     const finalEmbed = new EmbedBuilder()
-        // HATA GİDERİLDİ: Boşluklu anahtar tırnak içine alındı.
-        .setTitle('MED Başvuru')
+        .setTitle(`Başvurunuz sonuçlandı!`)
         .setAuthor({
-            name: user.tag,
-            iconURL: user.displayAvatarURL()
+            name: 'MED Başvuru'
         })
-        .setDescription(`**Başvurunuz sonuçlandı!**`)
+        .setDescription(`\`Başvuru yapan:`\ /n <@${applicantUser.id}`)
         .addFields({
-            name: `Başvuru Durumu`,
+            name: ` ${basvuruConfig.type}Başvurusu Durumu`,
             value: `Başvurunuz, <@${interaction.user.id}> kişisi tarafından **${statusText}**`,
             inline: false
         })
@@ -573,29 +571,4 @@ async function handleCloseChannelButton(interaction) {
     const GORUSME_YETKILISI_ROLE_ID = '1236317902295138304';
     const GORUSME_KATEGORI_ID = '1268509251911811175';
 
-    // Sadece görüşme kanallarında çalışır
-    if (channel.parentId !== GORUSME_KATEGORI_ID) {
-        return;
-    }
-
-    // Yetkili rolüne sahip olanlar veya kanalı açan kişi kanalı kapatabilir.
-    const hasPermission = member.roles.cache.has(GORUSME_YETKILISI_ROLE_ID);
-
-    if (!hasPermission) {
-        // Yetkisi olmayan kişiye ephemeral bir mesaj gönder
-        return interaction.followUp({
-            content: 'Bu kanalı kapatma yetkiniz bulunmamaktadır.',
-            ephemeral: true
-        });
-    }
-
-    try {
-        await channel.delete();
-    } catch (error) {
-        console.error('[HATA] Kanal silinirken bir hata oluştu:', error);
-        await interaction.followUp({
-            content: 'Kanal silinirken bir hata oluştu. Lütfen manuel olarak silmeyi deneyin.',
-            ephemeral: true
-        });
-    }
-}
+    // Sadece gö
