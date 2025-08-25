@@ -355,7 +355,7 @@ async function handleResultButtons(interaction) {
         .setAuthor({
             name: 'MED Başvuru'
         })
-        .setDescription(`\`Başvuru yapan:`\ /n <@${applicantUser.id}`)
+        .setDescription(`Başvuru yapan:\n<@${applicantUser.id}>`)
         .addFields({
             name: ` ${basvuruConfig.type}Başvurusu Durumu`,
             value: `Başvurunuz, <@${interaction.user.id}> kişisi tarafından **${statusText}**`,
