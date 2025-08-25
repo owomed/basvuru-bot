@@ -1,4 +1,4 @@
-e// Bu dosya, Discord.js v14 kullanarak çeşitli interaksiyonları yönetir:
+// Bu dosya, Discord.js v14 kullanarak çeşitli interaksiyonları yönetir:
 // Buton tıklamaları, modal gönderimleri ve reaksiyon kolektörleri.
 
 const {
