@@ -370,7 +370,7 @@ async function handleResultButtons(interaction) {
         .setAuthor({
             name: 'MED Başvuru'
         })
-        .setDescription(`Başvuru yapan:\n<@${applicantId}>`)
+        .setDescription(`\`Başvuru yapan:\`\n<@${applicantId}>`)
         .addFields({
             name: `${basvuruType} Başvurusu Durumu`,
             value: `Başvurunuz, <@${interaction.user.id}> kişisi tarafından **${statusText}**`,
@@ -378,7 +378,7 @@ async function handleResultButtons(interaction) {
         })
         .setColor(isApproved ? '#2ecc71' : '#e74c3c')
         .setFooter({
-            text: `${guild.name}`,
+            text: `${guild.name}🤍|${basvuruType} başvuru sonucu`,
             iconURL: guild.iconURL()
         })
         .setTimestamp();
