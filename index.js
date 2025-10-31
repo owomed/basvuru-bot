@@ -96,7 +96,7 @@ client.once('ready', async () => {
     // Botun durumunu ayarlayın
     client.user.setPresence({
         activities: [{
-            name: 'MED 🤎 OwO ile ilgileniyor',
+            name: 'MED OwO :( ',
             type: ActivityType.Custom
         }],
         status: 'dnd'
